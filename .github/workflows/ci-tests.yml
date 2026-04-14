@@ -1,0 +1,52 @@
+name: CI - Tests (skeleton)
+
+# Skeleton workflow to run Playwright E2E and API-level checks.
+# Configure project secrets in GitHub: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, TEST_USER_ID
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      TEST_USER_ID: ${{ secrets.TEST_USER_ID }}
+      CHECKIN_RPC_NAME: check_in
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start production server
+        run: |
+          nohup npm run start &
+          npx wait-on http://localhost:3000 --timeout 15000
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright E2E (checkin)
+        run: npx playwright test tests/checkin.spec.ts --reporter=list
+
+      - name: Run API checkin script
+        run: node tests/api/checkin.test.js
+
+# NOTE: This workflow is a skeleton. You may wish to split E2E and API tests into separate jobs,
+# and add caching, matrix builds, or explicit service startup steps depending on your CI requirements.
