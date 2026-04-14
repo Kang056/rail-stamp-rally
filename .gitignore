@@ -42,3 +42,8 @@ test-results/
 # Local git logs and CI push logs
 git-push.log
 git-push-ci.log
+git-push-evidence.log
+git-commit-evidence.log
+git-delete-branch.log
+git-delete-local-branch.log
+git-*.log
