@@ -23,7 +23,7 @@ export default function BadgeCheckin({ onSuccess }: Props) {
       }
 
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject),
+        avigator.geolocation.getCurrentPosition(resolve, reject),
       );
       const { latitude, longitude } = pos.coords;
 
@@ -37,16 +37,16 @@ export default function BadgeCheckin({ onSuccess }: Props) {
         setError('請先登入才能打卡');
         return;
       }
-n      const { data: rpcData, error: rpcErr } = await supabase.rpc('checkin', {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('checkin', {
         user_lon: longitude,
         user_lat: latitude,
         user_id: user.id,
       });
-n      if (rpcErr) {
+      if (rpcErr) {
         setError(rpcErr.message ?? '打卡失敗');
         return;
       }
-n      const result = rpcData as any;
+      const result = rpcData as any;
       setBadgeImage(result?.badge_image_url ?? null);
       setMessage('打卡成功！');
       if (typeof onSuccess === 'function') onSuccess();
@@ -99,3 +99,4 @@ export default function BadgeCheckin({ onSuccess }: Props) {
     </div>
   );
 }
+
