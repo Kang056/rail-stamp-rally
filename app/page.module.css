@@ -1,0 +1,98 @@
+/* app/page.module.css — layout for the Rail Stamp Rally main page */
+
+/* ── Full-screen container ─────────────────────────────────────── */
+.main {
+  display: flex;
+  width: 100vw;
+  height: 100dvh; /* dynamic viewport height — avoids mobile browser chrome */
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Map section (takes all space on mobile) ────────────────────── */
+.mapSection {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.mapLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #aaa;
+  font-size: 1rem;
+}
+
+/* ── Desktop sidebar — hidden on mobile ─────────────────────────── */
+.sidebar {
+  display: none; /* hidden by default (mobile-first) */
+}
+
+/* ── Mobile bottom sheet wrapper ───────────────────────────────── */
+.mobileOnly {
+  display: block;
+}
+
+/* ── Sheet drag handle visual ───────────────────────────────────── */
+.sheetHandle {
+  width: 36px;
+  height: 4px;
+  background: #ccc;
+  border-radius: 2px;
+  margin: 0 auto;
+}
+
+/* ── App title in desktop sidebar ──────────────────────────────── */
+.appTitle {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.appSubtitle {
+  font-size: 0.8rem;
+  color: #aaa;
+  margin-top: 0.15rem;
+}
+
+.sidebarHeader {
+  padding: 1.25rem 1rem 0.75rem;
+  border-bottom: 1px solid #333;
+}
+
+.sidebarContent {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   Desktop breakpoint — show sidebar, hide bottom sheet
+   ══════════════════════════════════════════════════════════════════ */
+@media (min-width: 768px) {
+  .main {
+    flex-direction: row;
+  }
+
+  /* Left sidebar: fixed width, dark background */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    min-width: 320px;
+    max-width: 320px;
+    height: 100%;
+    background: #1a1a2e;
+    border-right: 1px solid #2e2e4e;
+    position: relative; /* NOT absolute — part of flex flow */
+    z-index: 10;
+    color: #f0f0f0;
+  }
+
+  /* Hide bottom sheet on desktop */
+  .mobileOnly {
+    display: none;
+  }
+}
