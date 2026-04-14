@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "cp node_modules/leaflet/dist/images/marker-*.png public/leaflet/ 2>/dev/null || true"
+    "postinstall": "node scripts/copy-leaflet-images.js || true"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
