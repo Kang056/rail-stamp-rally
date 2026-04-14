@@ -1,15 +1,12 @@
-/* app/globals.css — global styles for Rail Stamp Rally */
+/* app/globals.css - global styles for Rail Stamp Rally */
 
-*,
-*::before,
-*::after {
+*, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html,
-body {
+html, body {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
@@ -19,7 +16,7 @@ body {
 
 /* Leaflet CSS is imported inside Map.tsx (browser-only) */
 
-/* ── Bottom sheet default overrides ─────────────────────────────── */
+/* Bottom sheet default overrides */
 [data-rsbs-overlay] {
   z-index: 1000 !important;
 }
