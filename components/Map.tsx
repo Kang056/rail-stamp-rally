@@ -36,7 +36,7 @@ interface MapProps {
 // ─────────────────────────────────────────────────────────────────────────────
 function addFilmstripPolyline(
   L: typeof import('leaflet'),
-  map: LeafletMap,
+  target: any,
   // GeoJSON coordinates array: [lng, lat][]
   coordinates: [number, number][],
   color: string,
@@ -49,7 +49,7 @@ function addFilmstripPolyline(
     weight: 8,
     opacity: 1,
     interactive: false,
-  }).addTo(map);
+  }).addTo(target);
 
   // Layer 2 — dashed colored top line (the railway track color)
   L.polyline(latLngs, {
@@ -58,7 +58,7 @@ function addFilmstripPolyline(
     opacity: 0.9,
     dashArray: '12, 6',
     interactive: true,
-  }).addTo(map);
+  }).addTo(target);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,6 +70,16 @@ export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+
+    // Ensure Leaflet CSS is present (CDN fallback)
+    if (typeof document !== 'undefined' && !document.querySelector('link[data-leaflet-css]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      link.crossOrigin = '';
+      link.setAttribute('data-leaflet-css', 'true');
+      document.head.appendChild(link);
+    }
 
     // Dynamically import Leaflet (browser-only)
     import('leaflet').then((L) => {
@@ -95,22 +105,60 @@ export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
 
       mapRef.current = map;
 
+      // Create/attach a feature layer group for geojson layers (so we can clear and re-add)
+      if (!(map as any).__featureLayer) {
+        (map as any).__featureLayer = L.layerGroup().addTo(map);
+      } else {
+        (map as any).__featureLayer.clearLayers();
+      }
+
       // ── Base tile layer (OpenStreetMap) ───────────────────────────────────
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution:
           '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
       }).addTo(map);
 
+      // Once tiles load, ensure sizing is correct
+      tileLayer.on('load', () => {
+        try { map.invalidateSize(true); } catch (e) { /* ignore */ }
+        setTimeout(() => { try { map.invalidateSize(true); } catch (e) { /* ignore */ } }, 300);
+      });
+
+      // Ensure correct sizing after layout/rendering (fixes visual tile artifacts)
+      map.whenReady(() => {
+        try { map.invalidateSize(true); } catch (e) { /* ignore */ }
+        setTimeout(() => { try { map.invalidateSize(true); } catch (e) { /* ignore */ } }, 500);
+      });
+
+      // Resize handler to keep tiles in sync with container size
+      const onResize = () => { try { map.invalidateSize(); } catch (e) { /* ignore */ } };
+      window.addEventListener('resize', onResize);
+
       // ── Render GeoJSON features ──────────────────────────────────────────
       if (geojson) {
         renderGeoJSON(L, map, geojson, onFeatureClick);
       }
+
+      // attach cleanup hooks
+      (map as any).__onCleanup = () => {
+        window.removeEventListener('resize', onResize);
+        tileLayer.off('load');
+      };
     });
 
     // Cleanup on unmount
     return () => {
-      mapRef.current?.remove();
+      try {
+        const map = mapRef.current;
+        if (map) {
+          const cb = (map as any).__onCleanup;
+          if (typeof cb === 'function') cb();
+          map.remove();
+        }
+      } catch (e) {
+        // ignore
+      }
       mapRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,6 +196,14 @@ function renderGeoJSON(
   geojson: FeatureCollection<Geometry, RailwayFeatureProperties>,
   onFeatureClick: (properties: RailwayFeatureProperties) => void,
 ) {
+  // Ensure a dedicated feature layer exists
+  let featureLayer: any = (map as any).__featureLayer;
+  if (!featureLayer) {
+    featureLayer = (map as any).__featureLayer = L.layerGroup().addTo(map);
+  } else {
+    featureLayer.clearLayers();
+  }
+
   const lines = geojson.features.filter((f) => f.properties.feature_type === 'line');
   const stations = geojson.features.filter((f) => f.properties.feature_type === 'station');
 
@@ -172,13 +228,13 @@ function renderGeoJSON(
     extractCoordinateArrays().forEach((coords) => {
       if (isIntercity) {
         // Filmstrip style for intercity railways
-        addFilmstripPolyline(L, map, coords, color);
+        addFilmstripPolyline(L, featureLayer, coords, color);
       } else {
         // Solid colored line for metro/MRT systems
         const latLngs = coords.map(([lng, lat]) => L.latLng(lat, lng));
         L.polyline(latLngs, { color, weight: 4, opacity: 0.85 })
           .on('click', () => onFeatureClick(props))
-          .addTo(map);
+          .addTo(featureLayer);
       }
     });
   });
@@ -199,8 +255,16 @@ function renderGeoJSON(
       fillOpacity: 1,
     })
       .on('click', () => onFeatureClick(props))
-      .addTo(map);
+      .addTo(featureLayer);
   });
+
+  // Ensure tiles/layout update after rendering
+  try {
+    map.invalidateSize(true);
+    setTimeout(() => { try { map.invalidateSize(true); } catch (e) { /* ignore */ } }, 250);
+  } catch (e) {
+    // ignore
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

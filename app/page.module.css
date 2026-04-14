@@ -4,7 +4,8 @@
 .main {
   display: flex;
   width: 100vw;
-  height: 100dvh; /* dynamic viewport height — avoids mobile browser chrome */
+  height: 100vh; /* fallback for browsers without dvh */
+  height: 100dvh; /* dynamic viewport height */
   overflow: hidden;
   position: relative;
 }
