@@ -1,0 +1,174 @@
+{
+  "devicePixelRatio": 1,
+  "innerWidth": 1280,
+  "innerHeight": 720,
+  "htmlRect": {
+    "selector": "html",
+    "width": 1280,
+    "height": 720,
+    "top": 0,
+    "left": 0,
+    "position": "static",
+    "transform": "none",
+    "overflow": "visible",
+    "display": "block"
+  },
+  "bodyRect": {
+    "selector": "body",
+    "width": 1280,
+    "height": 720,
+    "top": 0,
+    "left": 0,
+    "position": "static",
+    "transform": "none",
+    "overflow": "visible",
+    "display": "block"
+  },
+  "mainRect": {
+    "selector": "main",
+    "width": 1280,
+    "height": 720,
+    "top": 0,
+    "left": 0,
+    "position": "relative",
+    "transform": "none",
+    "overflow": "hidden",
+    "display": "flex"
+  },
+  "mapSectionRect": {
+    "selector": "section[aria-label=\"Interactive railway map\"]",
+    "width": 960,
+    "height": 720,
+    "top": 0,
+    "left": 320,
+    "position": "relative",
+    "transform": "none",
+    "overflow": "visible",
+    "display": "block"
+  },
+  "leafletContainerRect": {
+    "selector": ".leaflet-container",
+    "width": 960,
+    "height": 720,
+    "top": 0,
+    "left": 320,
+    "position": "relative",
+    "transform": "none",
+    "overflow": "visible",
+    "display": "block"
+  },
+  "tilePaneRect": {
+    "selector": ".leaflet-tile-pane",
+    "width": 960,
+    "height": 1040,
+    "top": 0,
+    "left": 320,
+    "position": "static",
+    "transform": "none",
+    "overflow": "visible",
+    "display": "block"
+  },
+  "tileContainerRect": {
+    "selector": ".leaflet-tile-container",
+    "width": 960,
+    "height": 1040,
+    "top": 0,
+    "left": 320,
+    "position": "static",
+    "transform": "matrix(1, 0, 0, 1, 0, 0)",
+    "overflow": "visible",
+    "display": "block"
+  },
+  "tileContainerTransform": "matrix(1, 0, 0, 1, 0, 0)",
+  "tileCount": 12,
+  "tileSamples": [
+    {
+      "src": "https://c.tile.openstreetmap.org/8/213/110.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 213, 235)"
+    },
+    {
+      "src": "https://a.tile.openstreetmap.org/8/214/110.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 469, 235)"
+    },
+    {
+      "src": "https://b.tile.openstreetmap.org/8/213/109.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 213, -21)"
+    },
+    {
+      "src": "https://c.tile.openstreetmap.org/8/214/109.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 469, -21)"
+    },
+    {
+      "src": "https://a.tile.openstreetmap.org/8/213/111.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 213, 491)"
+    },
+    {
+      "src": "https://b.tile.openstreetmap.org/8/214/111.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 469, 491)"
+    },
+    {
+      "src": "https://b.tile.openstreetmap.org/8/212/110.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, -43, 235)"
+    },
+    {
+      "src": "https://b.tile.openstreetmap.org/8/215/110.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 725, 235)"
+    },
+    {
+      "src": "https://a.tile.openstreetmap.org/8/212/109.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, -43, -21)"
+    },
+    {
+      "src": "https://a.tile.openstreetmap.org/8/215/109.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 725, -21)"
+    },
+    {
+      "src": "https://c.tile.openstreetmap.org/8/212/111.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, -43, 491)"
+    },
+    {
+      "src": "https://c.tile.openstreetmap.org/8/215/111.png",
+      "width": 256,
+      "height": 256,
+      "transform": "matrix(1, 0, 0, 1, 725, 491)"
+    }
+  ],
+  "hasNaNTransforms": false,
+  "parentTransforms": [
+    {
+      "tag": "section",
+      "transform": "none"
+    },
+    {
+      "tag": "main",
+      "transform": "none"
+    },
+    {
+      "tag": "body",
+      "transform": "none"
+    }
+  ],
+  "computedBodyStyle": ""
+}
