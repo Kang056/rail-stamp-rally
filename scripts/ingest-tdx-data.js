@@ -141,21 +141,26 @@ async function insertStations(supabase, featureCollection, systemType) {
       station_name: f.properties.StationName?.Zh_tw ?? f.properties.station_name ?? '',
       system_type:  systemType,
       line_id:      f.properties.LineID ?? f.properties.line_id ?? '',
-      // Use ST_GeomFromGeoJSON to store the Point geometry
-      // Supabase JS client does not yet support direct geometry literals;
-      // we pass the GeoJSON string and use an RPC or raw SQL:
-      //   INSERT … geom = ST_GeomFromGeoJSON('{"type":"Point","coordinates":[…]}')
-      geom:         `ST_GeomFromGeoJSON('${JSON.stringify(f.geometry)}')`,
+      // Pass the geometry object directly; the RPC will call ST_GeomFromGeoJSON on the server side.
+      geom:         f.geometry,
+      established_year: f.properties.EstablishedYear ?? f.properties.established_year ?? null,
+      history_desc: f.properties.HistoryDescription ?? f.properties.history_desc ?? null,
+      history_image_url: f.properties.HistoryImageURL ?? f.properties.history_image_url ?? null,
     }));
 
-  // TODO: replace with a Supabase RPC or raw SQL call that accepts
-  // ST_GeomFromGeoJSON.  The snippet below shows the intended approach:
-  //
-  //   const { error } = await supabase.rpc('insert_stations_bulk', { rows });
-  //
-  // For now log the first row to confirm the shape:
   console.log(`  ${systemType} stations parsed: ${rows.length} features`);
-  if (rows.length) console.log('  Sample row:', JSON.stringify(rows[0], null, 2));
+  if (!rows.length) return;
+
+  try {
+    const { error } = await supabase.rpc('insert_stations_bulk', { rows: JSON.stringify(rows) });
+    if (error) {
+      console.error(`  ❌  insert_stations_bulk error for ${systemType}:`, error);
+    } else {
+      console.log(`  ✅  insert_stations_bulk succeeded for ${systemType} (${rows.length} rows)`);
+    }
+  } catch (err) {
+    console.error(`  ❌  RPC call failed for ${systemType}:`, err);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -195,12 +200,24 @@ async function insertLines(supabase, featureCollection, systemType, colorHex) {
         line_name:   f.properties.LineName?.Zh_tw ?? f.properties.line_name ?? '',
         system_type: systemType,
         color_hex:   colorHex,
-        geom:        `ST_GeomFromGeoJSON('${JSON.stringify(geomJson)}')`,
+        geom:        geomJson,
+        history_desc: f.properties.HistoryDescription ?? f.properties.history_desc ?? null,
       };
     });
 
   console.log(`  ${systemType} lines parsed: ${rows.length} features`);
-  if (rows.length) console.log('  Sample row:', JSON.stringify(rows[0], null, 2));
+  if (!rows.length) return;
+
+  try {
+    const { error } = await supabase.rpc('insert_lines_bulk', { rows: JSON.stringify(rows) });
+    if (error) {
+      console.error(`  ❌  insert_lines_bulk error for ${systemType}:`, error);
+    } else {
+      console.log(`  ✅  insert_lines_bulk succeeded for ${systemType} (${rows.length} rows)`);
+    }
+  } catch (err) {
+    console.error(`  ❌  RPC call failed for ${systemType}:`, err);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
