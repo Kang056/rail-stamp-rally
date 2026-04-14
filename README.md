@@ -8,7 +8,7 @@ station/line historical information backed by **Supabase + PostGIS**.
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | [Next.js 14](https://nextjs.org) (App Router) |
+| Framework | [Next.js 15](https://nextjs.org) (App Router) |
 | Database | [Supabase](https://supabase.com) (PostgreSQL + PostGIS) |
 | Map Engine | [Leaflet.js](https://leafletjs.com), [geojson-vt](https://github.com/mapbox/geojson-vt), [Leaflet.VectorGrid](https://github.com/Leaflet/Leaflet.VectorGrid) |
 | Mobile UI | [react-spring-bottom-sheet](https://github.com/stipsan/react-spring-bottom-sheet) |
