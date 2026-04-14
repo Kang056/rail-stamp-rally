@@ -97,3 +97,14 @@
     display: none;
   }
 }
+
+/* Badge checkin overlay */
+.badgeOverlay {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
