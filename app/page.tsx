@@ -9,10 +9,12 @@
  */
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { RailwayFeatureProperties } from '@/lib/supabaseClient';
 import FeatureDetails from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
+import { getAllRailwayGeoJSON } from '@/lib/supabaseClient';
+import BadgeCheckin from '@/components/BadgeCheckin';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
@@ -53,6 +55,32 @@ export default function HomePage() {
 
   const useMockGeo = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  const [geojson, setGeojson] = useState<any | null>(null);
+  const [loadingGeo, setLoadingGeo] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  const fetchGeo = useCallback(async () => {
+    setLoadingGeo(true);
+    setGeoError(null);
+    try {
+      const data = await getAllRailwayGeoJSON();
+      setGeojson(data);
+    } catch (e: any) {
+      setGeoError(e?.message ?? String(e));
+    } finally {
+      setLoadingGeo(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!useMockGeo) {
+      fetchGeo();
+    } else {
+      // When using mock data, set it immediately so Map can render instantly
+      setGeojson(MOCK_GEOJSON as any);
+    }
+  }, [useMockGeo, fetchGeo]);
+
   return (
     <main className={styles.main}>
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -72,7 +100,26 @@ export default function HomePage() {
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
-        <Map geojson={useMockGeo ? MOCK_GEOJSON : null} onFeatureClick={handleFeatureClick} />
+        {/* Badge checkin overlay (non-blocking) */}
+        {!useMockGeo && (
+          <div className={styles.badgeOverlay}>
+            <BadgeCheckin onSuccess={fetchGeo} />
+          </div>
+        )}
+
+        {/* Show a small loading / error indicator when fetching real data */}
+        {loadingGeo && (
+          <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 900 }} aria-live="polite">
+            地圖資料載入中…
+          </div>
+        )}
+        {geoError && (
+          <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 900, background: '#fee', color: '#900', padding: '6px 8px', borderRadius: 6 }} role="status">
+            載入資料失敗：{geoError}
+          </div>
+        )}
+
+        <Map geojson={useMockGeo ? MOCK_GEOJSON : geojson} onFeatureClick={handleFeatureClick} />
       </section>
 
       {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}
