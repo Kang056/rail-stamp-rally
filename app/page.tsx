@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { useState, useCallback } from 'react';
 import type { RailwayFeatureProperties } from '@/lib/supabaseClient';
 import FeatureDetails from '@/components/FeatureDetails';
+import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
@@ -50,6 +51,8 @@ export default function HomePage() {
     setSelectedFeature(null);
   }, []);
 
+  const useMockGeo = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   return (
     <main className={styles.main}>
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -69,7 +72,7 @@ export default function HomePage() {
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
-        <Map geojson={null} onFeatureClick={handleFeatureClick} />
+        <Map geojson={useMockGeo ? MOCK_GEOJSON : null} onFeatureClick={handleFeatureClick} />
       </section>
 
       {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}
