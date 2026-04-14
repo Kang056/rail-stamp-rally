@@ -23,7 +23,7 @@ export default function BadgeCheckin({ onSuccess }: Props) {
       }
 
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        avigator.geolocation.getCurrentPosition(resolve, reject),
+        navigator.geolocation.getCurrentPosition(resolve, reject),
       );
       const { latitude, longitude } = pos.coords;
 
