@@ -28,3 +28,17 @@ next-env.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Playwright / test artifacts
+playwright-report/
+playwright-results.txt
+playwright-test-output.txt
+playwright-screenshots/
+playwright-screenshots-list.txt
+
+# Test runner outputs
+test-results/
+
+# Local git logs and CI push logs
+git-push.log
+git-push-ci.log
