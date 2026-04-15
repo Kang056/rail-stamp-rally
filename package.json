@@ -7,6 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "npx playwright test",
+    "test:e2e": "npx playwright test",
+    "precheck": "npm run typecheck && npm run lint && npm run build",
     "postinstall": "node scripts/copy-leaflet-images.js || true"
   },
   "dependencies": {

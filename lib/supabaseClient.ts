@@ -5,20 +5,19 @@ import type { FeatureCollection, Geometry } from 'geojson';
 // Environment variables
 // Copy .env.local.example → .env.local and fill in your project values.
 // ─────────────────────────────────────────────────────────────────────────────
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase environment variables. ' +
-      'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local',
-  );
-}
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Singleton Supabase client (safe for both browser and server components)
+// When env vars are missing (e.g. CI build), create a dummy client that will
+// fail at request time rather than at module-load time, so static generation
+// can still succeed.
 // ─────────────────────────────────────────────────────────────────────────────
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type definitions for station / line properties returned from the DB
