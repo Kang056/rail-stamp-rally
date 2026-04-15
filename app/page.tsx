@@ -42,7 +42,13 @@ export default function HomePage() {
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
     setSelectedFeature(props);
-    setSheetOpen(true);
+    // Only open the bottom sheet on small viewports (mobile).
+    // On desktop (>=768px) details are shown in the left sidebar.
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSheetOpen(true);
+    } else {
+      setSheetOpen(false);
+    }
   }, []);
 
   const handleClose = useCallback(() => {
@@ -83,8 +89,8 @@ export default function HomePage() {
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
       <aside className={styles.sidebar} aria-label="Feature details sidebar">
         <header className={styles.sidebarHeader}>
-          <h1 className={styles.appTitle}>🚂 鐵道集旅</h1>
-          <p className={styles.appSubtitle}>Rail Stamp Rally</p>
+          {/* <h1 className={styles.appTitle}>🚂 鐵道集旅</h1> */}
+          <h1 className={styles.appSubtitle}>Rail Stamp Rally</h1>
         </header>
 
         <div className={styles.sidebarContent}>

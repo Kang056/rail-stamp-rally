@@ -146,6 +146,7 @@
   left: 0;
   right: 0;
   background: #ffffff;
+  color: #111111;
   border-radius: 16px 16px 0 0;
   max-height: 85vh;
   z-index: 1000;
