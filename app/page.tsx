@@ -37,6 +37,7 @@ export default function HomePage() {
   const [selectedFeature, setSelectedFeature] =
     useState<RailwayFeatureProperties | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showAllBadges, setShowAllBadges] = useState(false);
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
@@ -115,7 +116,16 @@ export default function HomePage() {
           </div>
         )}
 
-        <Map geojson={useMockGeo ? MOCK_GEOJSON : geojson} onFeatureClick={handleFeatureClick} />
+        <Map geojson={useMockGeo ? MOCK_GEOJSON : geojson} onFeatureClick={handleFeatureClick} showAllBadges={showAllBadges} />
+
+        {/* Test button: toggle all station badges */}
+        <button
+          className={styles.showBadgesBtn}
+          onClick={() => setShowAllBadges((v) => !v)}
+          aria-label={showAllBadges ? '隱藏所有徽章' : '顯示所有徽章'}
+        >
+          {showAllBadges ? '🏅 隱藏徽章' : '🏅 顯示所有徽章'}
+        </button>
       </section>
 
       {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}
@@ -128,6 +138,9 @@ export default function HomePage() {
           <Drawer.Portal>
             <Drawer.Overlay className={styles.drawerOverlay} />
             <Drawer.Content className={styles.drawerContent}>
+              <Drawer.Title className={styles.visuallyHidden}>
+                車站 / 路線詳情
+              </Drawer.Title>
               <div className={styles.sheetHandle} aria-hidden="true" />
               <div className={styles.drawerInner}>
                 <FeatureDetails
