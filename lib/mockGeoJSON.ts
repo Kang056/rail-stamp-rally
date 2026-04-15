@@ -10,9 +10,11 @@ export const MOCK_GEOJSON: FeatureCollection<Geometry, RailwayFeatureProperties>
       properties: {
         id: 'mock-line-1',
         feature_type: 'line',
-        name: 'Mock TRA Line',
+        line_id: 'mock-line-1',
+        line_name: 'Mock TRA Line',
         system_type: 'TRA',
         color_hex: '#ff0000',
+        history_desc: null,
       } as RailwayFeatureProperties,
     },
     {
@@ -21,8 +23,13 @@ export const MOCK_GEOJSON: FeatureCollection<Geometry, RailwayFeatureProperties>
       properties: {
         id: 'mock-station-1',
         feature_type: 'station',
-        name: 'Mock Station 1',
+        station_id: 'mock-station-1',
+        station_name: 'Mock Station 1',
         system_type: 'TRA',
+        line_id: 'mock-line-1',
+        established_year: null,
+        history_desc: null,
+        history_image_url: null,
       } as RailwayFeatureProperties,
     },
   ],
