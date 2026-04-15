@@ -2,26 +2,22 @@
 /**
  * scripts/ingest-tdx-data.js
  *
- * One-time data ingestion script for Rail Stamp Rally (鐵道集旅).
- * Fetches railway geometry and station data from the TDX (Transport Data
- * eXchange) platform and inserts it into Supabase/PostGIS.
+ * Fetches TDX data and saves to local JSON file.
+ * Use upload-to-supabase.js to write data to Supabase.
  *
  * Prerequisites:
  *   1. Copy .env.local.example → .env.local and fill in:
  *        TDX_CLIENT_ID, TDX_CLIENT_SECRET
- *        NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- *   2. npm install @supabase/supabase-js dotenv
- *   3. node scripts/ingest-tdx-data.js
+ *   2. node scripts/ingest-tdx-data.js
+ *   3. (optional) node scripts/ingest-tdx-data.js --dry-run
  *
- * NOTE: Use the Supabase service-role key (not the anon key) for INSERT
- * operations so that Row-Level Security is bypassed.
+ * Output: data/tdx-railway-data.json
  */
 
 'use strict';
 
 require('dotenv').config({ path: '.env.local' });
 
-const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
 
@@ -31,14 +27,13 @@ const path = require('path');
 const TDX_TOKEN_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/protocol/openid-connect/token';
 const TDX_BASE_URL  = 'https://tdx.transportdata.tw/api/basic';
 
-const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
 const TDX_CLIENT_ID     = process.env.TDX_CLIENT_ID;
 const TDX_CLIENT_SECRET = process.env.TDX_CLIENT_SECRET;
 
-const FETCH_DELAY = 3000; // 3s between each request (TDX free tier is restrictive)
+const FETCH_DELAY = 10000; // 10s between each request (TDX free tier is restrictive)
+
+const OUTPUT_DIR  = path.join(__dirname, '..', 'data');
+const OUTPUT_FILE = path.join(OUTPUT_DIR, 'tdx-railway-data.json');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 1 — Obtain TDX Access Token (client_credentials flow)
@@ -127,7 +122,7 @@ async function fetchJSON(url, accessToken, retries = 3) {
     }
 
     if (res.status === 429 && attempt < retries) {
-      const wait = 3000 * attempt; // 3s, 6s, 9s
+      const wait = 20000 * attempt; // 3s, 6s, 9s
       console.warn(`  ⚠️  429 rate-limited — retrying in ${wait}ms…`);
       await delay(wait);
       continue;
@@ -187,21 +182,12 @@ function parseWKT(wkt) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 4 — Parse and insert station data
-//
-// TDX JSON station object:
-// {
-//   StationUID: "TRA-1000",
-//   StationID: "1000",
-//   StationName: { Zh_tw: "基隆", En: "Keelung" },
-//   StationPosition: { PositionLon: 121.74, PositionLat: 25.13 },
-//   ...
-// }
+// Step 4 — Parse station data into DB-ready format
 // ─────────────────────────────────────────────────────────────────────────────
-async function insertStations(supabase, stationsArray, dbSystemType) {
+function parseStations(stationsArray, dbSystemType) {
   if (!Array.isArray(stationsArray) || !stationsArray.length) {
     console.log(`  No station data for ${dbSystemType}`);
-    return;
+    return [];
   }
 
   const rows = stationsArray
@@ -225,65 +211,31 @@ async function insertStations(supabase, stationsArray, dbSystemType) {
     }));
 
   console.log(`  ${dbSystemType} stations parsed: ${rows.length} rows`);
-  if (!rows.length) return;
-
-  try {
-    const { error } = await supabase.rpc('insert_stations_bulk', { rows: JSON.stringify(rows) });
-    if (error) {
-      console.error(`  ❌  insert_stations_bulk error for ${dbSystemType}:`, error);
-    } else {
-      console.log(`  ✅  insert_stations_bulk succeeded for ${dbSystemType} (${rows.length} rows)`);
-    }
-  } catch (err) {
-    console.error(`  ❌  RPC call failed for ${dbSystemType}:`, err);
-  }
+  return rows;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 5 — Parse and insert line/shape data
-//
-// TDX JSON shape object:
-// {
-//   LineNo: "WL",
-//   LineID: "WL",
-//   LineName: { Zh_tw: "西部幹線", En: "Western Line" },
-//   Geometry: "MULTILINESTRING((121.74 25.13, 121.75 25.14, ...))",
-//   ...
-// }
+// Step 5 — Parse line/shape data into DB-ready format
 // ─────────────────────────────────────────────────────────────────────────────
-async function insertLines(supabase, shapesArray, dbSystemType, colorHex) {
+function parseLines(shapesArray, dbSystemType, colorHex) {
   if (!Array.isArray(shapesArray) || !shapesArray.length) {
     console.log(`  No line/shape data for ${dbSystemType}`);
-    return;
+    return [];
   }
 
   const rows = shapesArray
-    .map((s) => {
-      const geom = parseWKT(s.Geometry);
-      return {
-        line_id:      s.LineID || s.LineNo || '',
-        line_name:    s.LineName?.Zh_tw || '',
-        system_type:  dbSystemType,
-        color_hex:    colorHex,
-        geom:         geom,
-        history_desc: null,
-      };
-    })
+    .map((s) => ({
+      line_id:      s.LineID || s.LineNo || '',
+      line_name:    s.LineName?.Zh_tw || '',
+      system_type:  dbSystemType,
+      color_hex:    colorHex,
+      geom:         parseWKT(s.Geometry),
+      history_desc: null,
+    }))
     .filter((r) => r.geom !== null);
 
   console.log(`  ${dbSystemType} lines parsed: ${rows.length} rows`);
-  if (!rows.length) return;
-
-  try {
-    const { error } = await supabase.rpc('insert_lines_bulk', { rows: JSON.stringify(rows) });
-    if (error) {
-      console.error(`  ❌  insert_lines_bulk error for ${dbSystemType}:`, error);
-    } else {
-      console.log(`  ✅  insert_lines_bulk succeeded for ${dbSystemType} (${rows.length} rows)`);
-    }
-  } catch (err) {
-    console.error(`  ❌  RPC call failed for ${dbSystemType}:`, err);
-  }
+  return rows;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -305,15 +257,9 @@ const SYSTEM_COLORS = {
 // ─────────────────────────────────────────────────────────────────────────────
 function parseArgs() {
   const args = process.argv.slice(2);
-  const out = { dryRun: false, useMock: false, localFile: null };
-  for (let i = 0; i < args.length; i++) {
-    const a = args[i];
+  const out = { dryRun: false };
+  for (const a of args) {
     if (a === '--dry-run') out.dryRun = true;
-    else if (a === '--mock') out.useMock = true;
-    else if ((a === '--file' || a === '-f') && args[i + 1]) {
-      out.localFile = args[i + 1];
-      i++;
-    }
   }
   return out;
 }
@@ -333,109 +279,10 @@ function mergeArrays(...arrays) {
 // Main entry point
 // ─────────────────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('🚂  Rail Stamp Rally — TDX data ingestion script');
+  console.log('🚂  Rail Stamp Rally — TDX data fetch script');
   console.log('─'.repeat(60));
   const opts = parseArgs();
 
-  // Initialise Supabase client
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    throw new Error('Supabase URL/key must be set in .env.local');
-  }
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-
-  // ── Local / mock mode ───────────────────────────────────────────────────
-  if (opts.useMock || opts.localFile) {
-    if (!opts.dryRun && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Writing to Supabase requires SUPABASE_SERVICE_ROLE_KEY (set in .env.local).');
-    }
-
-    const localPath = opts.localFile
-      ? path.resolve(opts.localFile)
-      : path.join(__dirname, 'mockGeoJSON.json');
-
-    if (!fs.existsSync(localPath)) {
-      throw new Error(`Local geojson not found: ${localPath}`);
-    }
-
-    console.log(`\n📂  Loading local GeoJSON: ${localPath}`);
-    const raw = fs.readFileSync(localPath, 'utf8');
-    const local = JSON.parse(raw);
-
-    const systems = ['TRA','HSR','TRTC','TYMC','KRTC','TMRT','NTMC','KLRT'];
-    const stationsBySystem = {};
-    const linesBySystem = {};
-    systems.forEach((s) => {
-      stationsBySystem[s] = [];
-      linesBySystem[s] = [];
-    });
-
-    for (const feat of (local.features || [])) {
-      const props = feat.properties || {};
-      const sys = (props.system_type || props.systemType || 'TRA').toUpperCase();
-      if (!systems.includes(sys)) continue;
-
-      const ft = (props.feature_type || props.featureType || '').toLowerCase();
-      if (ft === 'station') {
-        stationsBySystem[sys].push({
-          StationUID: props.id ?? props.station_id ?? props.stationId ?? '',
-          StationID: props.id ?? props.station_id ?? props.stationId ?? '',
-          StationName: { Zh_tw: props.name ?? props.station_name ?? '' },
-          StationPosition: {
-            PositionLon: feat.geometry?.coordinates?.[0],
-            PositionLat: feat.geometry?.coordinates?.[1],
-          },
-          LineID: props.line_id ?? props.lineId ?? '',
-        });
-      } else if (ft === 'line') {
-        const geom = feat.geometry;
-        const geomJson = geom?.type === 'LineString'
-          ? { type: 'MultiLineString', coordinates: [geom.coordinates] }
-          : geom;
-
-        linesBySystem[sys].push({
-          LineID: props.id ?? props.line_id ?? props.lineId ?? '',
-          LineName: { Zh_tw: props.name ?? props.line_name ?? '' },
-          _geomOverride: geomJson,
-        });
-      }
-    }
-
-    console.log('\n📍  Processing local stations…');
-    for (const s of systems) {
-      if (!stationsBySystem[s].length) continue;
-      console.log(`  ${s} stations: ${stationsBySystem[s].length}`);
-      if (!opts.dryRun) await insertStations(supabase, stationsBySystem[s], s);
-    }
-
-    console.log('\n🛤   Processing local lines…');
-    for (const s of systems) {
-      if (!linesBySystem[s].length) continue;
-      const rows = linesBySystem[s].map((ms) => ({
-        line_id:      ms.LineID || '',
-        line_name:    ms.LineName?.Zh_tw || '',
-        system_type:  s,
-        color_hex:    SYSTEM_COLORS[s],
-        geom:         ms._geomOverride,
-        history_desc: null,
-      })).filter((r) => r.geom != null);
-      console.log(`  ${s} lines: ${rows.length}`);
-      if (!opts.dryRun) {
-        try {
-          const { error } = await supabase.rpc('insert_lines_bulk', { rows: JSON.stringify(rows) });
-          if (error) console.error(`  ❌  insert_lines_bulk error for ${s}:`, error);
-          else console.log(`  ✅  insert_lines_bulk succeeded for ${s} (${rows.length} rows)`);
-        } catch (err) {
-          console.error(`  ❌  RPC call failed for ${s}:`, err);
-        }
-      }
-    }
-
-    console.log('\n✅  Local ingestion complete.');
-    if (opts.dryRun) console.log('Dry-run mode: no writes were performed.');
-    return;
-  }
-
-  // ── Live TDX fetch mode ─────────────────────────────────────────────────
   if (!TDX_CLIENT_ID || !TDX_CLIENT_SECRET) {
     throw new Error('TDX_CLIENT_ID and TDX_CLIENT_SECRET must be set in .env.local');
   }
@@ -478,32 +325,55 @@ async function main() {
   const ntalrtLinesRaw = await fetchJSON(TDX_ENDPOINTS.NTALRT_LINES, token);
   const ntmcLines = mergeArrays(ntmcLinesRaw, ntdlrtLinesRaw, ntalrtLinesRaw);
 
-  // ── Insert stations ─────────────────────────────────────────────────────
-  console.log('\n📍  Inserting stations into Supabase…');
-  await insertStations(supabase, traStations,  'TRA');
-  await insertStations(supabase, thsrStations, 'HSR');   // TDX THSR → DB HSR
-  await insertStations(supabase, trtcStations, 'TRTC');
-  await insertStations(supabase, tymcStations, 'TYMC');
-  await insertStations(supabase, krtcStations, 'KRTC');
-  await insertStations(supabase, tmrtStations, 'TMRT');
-  await insertStations(supabase, ntmcStations, 'NTMC');  // Merged NTMC + NTDLRT + NTALRT
-  await insertStations(supabase, klrtStations, 'KLRT');
+  // ── Parse stations ──────────────────────────────────────────────────────
+  console.log('\n📍  Parsing stations…');
+  const stations = {
+    TRA:  parseStations(traStations,  'TRA'),
+    HSR:  parseStations(thsrStations, 'HSR'),
+    TRTC: parseStations(trtcStations, 'TRTC'),
+    TYMC: parseStations(tymcStations, 'TYMC'),
+    KRTC: parseStations(krtcStations, 'KRTC'),
+    TMRT: parseStations(tmrtStations, 'TMRT'),
+    NTMC: parseStations(ntmcStations, 'NTMC'),
+    KLRT: parseStations(klrtStations, 'KLRT'),
+  };
 
-  // ── Insert lines ────────────────────────────────────────────────────────
-  console.log('\n🛤   Inserting lines into Supabase…');
-  await insertLines(supabase, traLines,  'TRA',  SYSTEM_COLORS.TRA);
-  await insertLines(supabase, thsrLines, 'HSR',  SYSTEM_COLORS.HSR);
-  await insertLines(supabase, trtcLines, 'TRTC', SYSTEM_COLORS.TRTC);
-  await insertLines(supabase, tymcLines, 'TYMC', SYSTEM_COLORS.TYMC);
-  await insertLines(supabase, krtcLines, 'KRTC', SYSTEM_COLORS.KRTC);
-  await insertLines(supabase, tmrtLines, 'TMRT', SYSTEM_COLORS.TMRT);
-  await insertLines(supabase, ntmcLines, 'NTMC', SYSTEM_COLORS.NTMC);
-  await insertLines(supabase, klrtLines, 'KLRT', SYSTEM_COLORS.KLRT);
+  // ── Parse lines ─────────────────────────────────────────────────────────
+  console.log('\n🛤   Parsing lines…');
+  const lines = {
+    TRA:  parseLines(traLines,  'TRA',  SYSTEM_COLORS.TRA),
+    HSR:  parseLines(thsrLines, 'HSR',  SYSTEM_COLORS.HSR),
+    TRTC: parseLines(trtcLines, 'TRTC', SYSTEM_COLORS.TRTC),
+    TYMC: parseLines(tymcLines, 'TYMC', SYSTEM_COLORS.TYMC),
+    KRTC: parseLines(krtcLines, 'KRTC', SYSTEM_COLORS.KRTC),
+    TMRT: parseLines(tmrtLines, 'TMRT', SYSTEM_COLORS.TMRT),
+    NTMC: parseLines(ntmcLines, 'NTMC', SYSTEM_COLORS.NTMC),
+    KLRT: parseLines(klrtLines, 'KLRT', SYSTEM_COLORS.KLRT),
+  };
 
-  console.log('\n✅  Ingestion script complete.');
+  // ── Summary ─────────────────────────────────────────────────────────────
+  const totalStations = Object.values(stations).reduce((sum, arr) => sum + arr.length, 0);
+  const totalLines    = Object.values(lines).reduce((sum, arr) => sum + arr.length, 0);
+  console.log(`\n📊  Total: ${totalStations} stations, ${totalLines} lines`);
+
+  if (opts.dryRun) {
+    console.log('\n🏁  Dry-run mode: no file written.');
+    return;
+  }
+
+  // ── Write to file ───────────────────────────────────────────────────────
+  const output = {
+    fetchedAt: new Date().toISOString(),
+    stations,
+    lines,
+  };
+
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(output, null, 2), 'utf8');
+  console.log(`\n✅  Data saved to ${OUTPUT_FILE}`);
 }
 
 main().catch((err) => {
-  console.error('❌  Ingestion failed:', err);
+  console.error('❌  Fetch failed:', err);
   process.exit(1);
 });
