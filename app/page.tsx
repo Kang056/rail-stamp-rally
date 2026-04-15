@@ -28,11 +28,7 @@ const Map = dynamic(() => import('@/components/Map'), {
   ),
 });
 
-// react-spring-bottom-sheet is also browser-only; import dynamically to be safe.
-const BottomSheet = dynamic(
-  () => import('react-spring-bottom-sheet').then((m) => m.BottomSheet),
-  { ssr: false },
-);
+import { Drawer } from 'vaul';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page component
@@ -124,24 +120,24 @@ export default function HomePage() {
 
       {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}
       <div className={styles.mobileOnly}>
-        <BottomSheet
+        <Drawer.Root
           open={sheetOpen}
-          onDismiss={handleClose}
-          snapPoints={({ maxHeight }: { maxHeight: number }) => [
-            maxHeight * 0.4,
-            maxHeight * 0.85,
-          ]}
-          defaultSnap={({ snapPoints }: { snapPoints: number[] }) => snapPoints[0]}
-          header={
-            <div className={styles.sheetHandle} aria-hidden="true" />
-          }
-          blocking={false}
+          onOpenChange={(open) => { if (!open) handleClose(); }}
+          modal={false}
         >
-          <FeatureDetails
-            feature={selectedFeature}
-            onClose={handleClose}
-          />
-        </BottomSheet>
+          <Drawer.Portal>
+            <Drawer.Overlay className={styles.drawerOverlay} />
+            <Drawer.Content className={styles.drawerContent}>
+              <div className={styles.sheetHandle} aria-hidden="true" />
+              <div className={styles.drawerInner}>
+                <FeatureDetails
+                  feature={selectedFeature}
+                  onClose={handleClose}
+                />
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
       </div>
     </main>
   );

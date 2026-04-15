@@ -42,6 +42,7 @@ export interface StationProperties {
   established_year: number | null;
   history_desc: string | null;
   history_image_url: string | null;
+  badge_image_url: string | null;
 }
 
 export interface LineProperties {
