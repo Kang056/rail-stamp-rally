@@ -37,11 +37,18 @@ export default function HomePage() {
   const [selectedFeature, setSelectedFeature] =
     useState<RailwayFeatureProperties | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [showAllBadges, setShowAllBadges] = useState(false);
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
     setSelectedFeature(props);
-    setSheetOpen(true);
+    // Only open the bottom sheet on small viewports (mobile).
+    // On desktop (>=768px) details are shown in the left sidebar.
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSheetOpen(true);
+    } else {
+      setSheetOpen(false);
+    }
   }, []);
 
   const handleClose = useCallback(() => {
@@ -82,8 +89,8 @@ export default function HomePage() {
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
       <aside className={styles.sidebar} aria-label="Feature details sidebar">
         <header className={styles.sidebarHeader}>
-          <h1 className={styles.appTitle}>🚂 鐵道集旅</h1>
-          <p className={styles.appSubtitle}>Rail Stamp Rally</p>
+          {/* <h1 className={styles.appTitle}>🚂 鐵道集旅</h1> */}
+          <h1 className={styles.appSubtitle}>Rail Stamp Rally</h1>
         </header>
 
         <div className={styles.sidebarContent}>
@@ -115,7 +122,16 @@ export default function HomePage() {
           </div>
         )}
 
-        <Map geojson={useMockGeo ? MOCK_GEOJSON : geojson} onFeatureClick={handleFeatureClick} />
+        <Map geojson={useMockGeo ? MOCK_GEOJSON : geojson} onFeatureClick={handleFeatureClick} showAllBadges={showAllBadges} />
+
+        {/* Test button: toggle all station badges */}
+        <button
+          className={styles.showBadgesBtn}
+          onClick={() => setShowAllBadges((v) => !v)}
+          aria-label={showAllBadges ? '隱藏所有徽章' : '顯示所有徽章'}
+        >
+          {showAllBadges ? '🏅 隱藏徽章' : '🏅 顯示所有徽章'}
+        </button>
       </section>
 
       {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}
@@ -128,6 +144,9 @@ export default function HomePage() {
           <Drawer.Portal>
             <Drawer.Overlay className={styles.drawerOverlay} />
             <Drawer.Content className={styles.drawerContent}>
+              <Drawer.Title className={styles.visuallyHidden}>
+                車站 / 路線詳情
+              </Drawer.Title>
               <div className={styles.sheetHandle} aria-hidden="true" />
               <div className={styles.drawerInner}>
                 <FeatureDetails

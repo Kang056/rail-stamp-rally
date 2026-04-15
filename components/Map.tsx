@@ -23,6 +23,8 @@ interface MapProps {
   geojson: FeatureCollection<Geometry, RailwayFeatureProperties> | null;
   /** Called when the user clicks on a station or line feature */
   onFeatureClick: (properties: RailwayFeatureProperties) => void;
+  /** When true, display badge icons on all stations that have badge_image_url */
+  showAllBadges?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -69,7 +71,7 @@ function addFilmstripPolyline(
 // ─────────────────────────────────────────────────────────────────────────────
 // MapComponent
 // ─────────────────────────────────────────────────────────────────────────────
-export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
+export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
@@ -144,7 +146,7 @@ export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
 
       // ── Render GeoJSON features ──────────────────────────────────────────
       if (geojson) {
-        renderGeoJSON(L, map, geojson, onFeatureClick);
+        renderGeoJSON(L, map, geojson, onFeatureClick, showAllBadges);
       }
 
       // attach cleanup hooks
@@ -177,10 +179,10 @@ export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
     if (!mapRef.current || !geojson) return;
 
     import('leaflet').then((L) => {
-      renderGeoJSON(L, mapRef.current!, geojson, onFeatureClick);
+      renderGeoJSON(L, mapRef.current!, geojson, onFeatureClick, showAllBadges);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geojson]);
+  }, [geojson, showAllBadges]);
 
   return (
     <div
@@ -203,6 +205,7 @@ function renderGeoJSON(
   map: LeafletMap,
   geojson: FeatureCollection<Geometry, RailwayFeatureProperties>,
   onFeatureClick: (properties: RailwayFeatureProperties) => void,
+  showAllBadges: boolean = false,
 ) {
   // Ensure a dedicated feature layer exists
   let featureLayer: any = (map as any).__featureLayer;
@@ -256,15 +259,29 @@ function renderGeoJSON(
     const props = feature.properties;
 
     L.circleMarker([lat, lng], {
-      radius: 5,
+      radius: 24,
       fillColor: '#ffffff',
       color: '#333333',
-      weight: 1.5,
+      weight: 2,
       opacity: 1,
       fillOpacity: 1,
     })
       .on('click', () => onFeatureClick(props))
       .addTo(featureLayer);
+
+    // Show badge overlay when showAllBadges is enabled
+    if (showAllBadges && props.feature_type === 'station' && (props as any).badge_image_url) {
+      const badgeSvg = (props as any).badge_image_url as string;
+      const encoded = encodeURIComponent(badgeSvg);
+      const badgeIcon = L.divIcon({
+        className: '',
+        html: `<img src="data:image/svg+xml,${encoded}" style="width:36px;height:36px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+      L.marker([lat, lng], { icon: badgeIcon, interactive: false })
+        .addTo(featureLayer);
+    }
   });
 
   // Ensure tiles/layout update after rendering

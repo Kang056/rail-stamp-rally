@@ -15,14 +15,16 @@
   border: none;
   font-size: 1.1rem;
   cursor: pointer;
-  color: #555;
+  color: inherit;
+  opacity: 0.6;
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   line-height: 1;
 }
 
 .closeButton:hover {
-  background: #f0f0f0;
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.15);
 }
 
 .content {
@@ -37,6 +39,7 @@
   align-items: center;
   gap: 0.5rem;
   padding-right: 2rem; /* avoid overlap with close button */
+  color: inherit;
 }
 
 .lineColorDot {
@@ -57,7 +60,7 @@
 }
 
 .metaList dt {
-  color: #888;
+  opacity: 0.6;
   white-space: nowrap;
 }
 
@@ -68,26 +71,28 @@
 
 .historyImage {
   width: 100%;
-  border-radius: 6px;
+  border-radius: 8px;
   object-fit: cover;
   max-height: 200px;
   margin-bottom: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .historyDesc {
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: #333;
+  font-size: 0.9rem;
+  line-height: 1.75;
   margin: 0;
+  opacity: 0.9;
+  letter-spacing: 0.02em;
 }
 
 .empty {
   padding: 1rem;
   text-align: center;
-  color: #666;
+  opacity: 0.6;
 }
 
 .emptyHint {
   font-size: 0.8rem;
-  color: #aaa;
+  opacity: 0.5;
 }
