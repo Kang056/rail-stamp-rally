@@ -40,25 +40,30 @@ function addFilmstripPolyline(
   // GeoJSON coordinates array: [lng, lat][]
   coordinates: [number, number][],
   color: string,
+  onClick?: () => void,
 ) {
   const latLngs = coordinates.map(([lng, lat]) => L.latLng(lat, lng));
 
   // Layer 1 — thick white base (the "film" strip background)
   L.polyline(latLngs, {
-    color: '#ffffff',
-    weight: 8,
+    color: '#FFFFFF',
+    weight: 6,
     opacity: 1,
     interactive: false,
   }).addTo(target);
 
   // Layer 2 — dashed colored top line (the railway track color)
-  L.polyline(latLngs, {
+  const topLine = L.polyline(latLngs, {
     color,
-    weight: 3,
+    weight: 4,
     opacity: 0.9,
-    dashArray: '12, 6',
+    dashArray: '10, 10',
     interactive: true,
   }).addTo(target);
+
+  if (onClick) {
+    topLine.on('click', onClick);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,9 +72,11 @@ function addFilmstripPolyline(
 export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const initializingRef = useRef(false);
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current || mapRef.current || initializingRef.current) return;
+    initializingRef.current = true;
 
     // Ensure Leaflet CSS is present (CDN fallback)
     if (typeof document !== 'undefined' && !document.querySelector('link[data-leaflet-css]')) {
@@ -160,6 +167,7 @@ export default function MapComponent({ geojson, onFeatureClick }: MapProps) {
         // ignore
       }
       mapRef.current = null;
+      initializingRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -227,8 +235,9 @@ function renderGeoJSON(
 
     extractCoordinateArrays().forEach((coords) => {
       if (isIntercity) {
-        // Filmstrip style for intercity railways
-        addFilmstripPolyline(L, featureLayer, coords, color);
+        // Filmstrip style: HSR=orange-on-white, TRA=black-on-white per design spec §4.2
+        const filmColor = props.system_type === 'HSR' ? '#db691d' : '#000000';
+        addFilmstripPolyline(L, featureLayer, coords, filmColor, () => onFeatureClick(props));
       } else {
         // Solid colored line for metro/MRT systems
         const latLngs = coords.map(([lng, lat]) => L.latLng(lat, lng));
