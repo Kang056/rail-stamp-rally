@@ -22,6 +22,8 @@
 require('dotenv').config({ path: '.env.local' });
 
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config
@@ -237,20 +239,126 @@ const SYSTEM_COLORS = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main entry point
 // ─────────────────────────────────────────────────────────────────────────────
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const out = { dryRun: false, useMock: false, localFile: null };
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--dry-run') out.dryRun = true;
+    else if (a === '--mock') out.useMock = true;
+    else if ((a === '--file' || a === '-f') && args[i + 1]) {
+      out.localFile = args[i + 1];
+      i++;
+    }
+  }
+  return out;
+}
+
 async function main() {
   console.log('🚂  Rail Stamp Rally — TDX data ingestion script');
   console.log('─'.repeat(60));
+  // Parse CLI args
+  const opts = parseArgs();
 
-  // Validate environment
-  if (!TDX_CLIENT_ID || !TDX_CLIENT_SECRET) {
-    throw new Error('TDX_CLIENT_ID and TDX_CLIENT_SECRET must be set in .env.local');
-  }
+  // Initialise Supabase client (required for any DB operation)
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     throw new Error('Supabase URL/key must be set in .env.local');
   }
-
-  // Initialise Supabase client
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+
+  // If using local/mock data, skip TDX token and network fetches
+  if (opts.useMock || opts.localFile) {
+    if (!opts.dryRun && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('Writing to Supabase requires SUPABASE_SERVICE_ROLE_KEY (set in .env.local).');
+    }
+
+    const localPath = opts.localFile
+      ? path.resolve(opts.localFile)
+      : path.join(__dirname, 'mockGeoJSON.json');
+
+    if (!fs.existsSync(localPath)) {
+      throw new Error(`Local geojson not found: ${localPath}`);
+    }
+
+    console.log(`\n📂  Loading local GeoJSON: ${localPath}`);
+    const raw = fs.readFileSync(localPath, 'utf8');
+    const local = JSON.parse(raw);
+
+    // Build per-system feature collections for stations/lines
+    const systems = ['TRA','HSR','TRTC','TYMC','KRTC','TMRT'];
+    const stationsBySystem = {};
+    const linesBySystem = {};
+    systems.forEach((s) => {
+      stationsBySystem[s] = { type: 'FeatureCollection', features: [] };
+      linesBySystem[s] = { type: 'FeatureCollection', features: [] };
+    });
+
+    for (const feat of (local.features || [])) {
+      const props = feat.properties || {};
+      const sys = (props.system_type || props.systemType || 'TRA').toUpperCase();
+      if (!systems.includes(sys)) continue;
+
+      if ((props.feature_type || props.featureType || '').toLowerCase() === 'station') {
+        // Normalize to TDX-like properties expected by insertStations
+        const f = {
+          type: 'Feature',
+          geometry: feat.geometry,
+          properties: {
+            StationID: props.id ?? props.station_id ?? props.stationId ?? '',
+            StationName: { Zh_tw: props.name ?? props.station_name ?? '' },
+            LineID: props.line_id ?? props.lineId ?? '',
+            EstablishedYear: props.established_year ?? props.establishedYear ?? null,
+            HistoryDescription: props.history_desc ?? props.historyDesc ?? null,
+            HistoryImageURL: props.history_image_url ?? props.historyImageUrl ?? null,
+          },
+        };
+        stationsBySystem[sys].features.push(f);
+      } else if ((props.feature_type || props.featureType || '').toLowerCase() === 'line') {
+        const geom = feat.geometry;
+        const geomJson = geom.type === 'LineString'
+          ? { type: 'MultiLineString', coordinates: [geom.coordinates] }
+          : geom;
+
+        const f = {
+          type: 'Feature',
+          geometry: geomJson,
+          properties: {
+            LineID: props.id ?? props.line_id ?? props.lineId ?? '',
+            LineName: { Zh_tw: props.name ?? props.line_name ?? '' },
+            ColorHex: props.color_hex ?? props.colorHex ?? null,
+            HistoryDescription: props.history_desc ?? props.historyDesc ?? null,
+          },
+        };
+        linesBySystem[sys].features.push(f);
+      }
+    }
+
+    // Insert or dry-run
+    console.log('\n📍  Processing local stations…');
+    for (const s of systems) {
+      const fc = stationsBySystem[s];
+      if (!fc.features.length) continue;
+      console.log(`  ${s} stations parsed: ${fc.features.length}`);
+      if (!opts.dryRun) await insertStations(supabase, fc, s);
+    }
+
+    console.log('\n🛤   Processing local lines…');
+    for (const s of systems) {
+      const fc = linesBySystem[s];
+      if (!fc.features.length) continue;
+      console.log(`  ${s} lines parsed: ${fc.features.length}`);
+      if (!opts.dryRun) await insertLines(supabase, fc, s, SYSTEM_COLORS[s]);
+    }
+
+    console.log('\n✅  Local ingestion complete.');
+    if (opts.dryRun) console.log('Dry-run mode: no writes were performed.');
+    return;
+  }
+
+  // Validate environment for live TDX fetch
+  if (!TDX_CLIENT_ID || !TDX_CLIENT_SECRET) {
+    throw new Error('TDX_CLIENT_ID and TDX_CLIENT_SECRET must be set in .env.local');
+  }
 
   // Step 1 — Get TDX token
   const token = await getTdxAccessToken();
