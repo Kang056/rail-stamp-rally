@@ -259,7 +259,7 @@ function renderGeoJSON(
     const props = feature.properties;
 
     L.circleMarker([lat, lng], {
-      radius: 12,
+      radius: 24,
       fillColor: '#ffffff',
       color: '#333333',
       weight: 2,
