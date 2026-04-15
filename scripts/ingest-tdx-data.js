@@ -9,7 +9,7 @@
  * Prerequisites:
  *   1. Copy .env.local.example → .env.local and fill in:
  *        TDX_CLIENT_ID, TDX_CLIENT_SECRET
- *        NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY (or service role key)
+ *        NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  *   2. npm install @supabase/supabase-js dotenv
  *   3. node scripts/ingest-tdx-data.js
  *
@@ -32,12 +32,13 @@ const TDX_TOKEN_URL = 'https://tdx.transportdata.tw/auth/realms/TDXConnect/proto
 const TDX_BASE_URL  = 'https://tdx.transportdata.tw/api/basic';
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL;
-// For writes use the service-role key; for reads the anon key is fine.
 const SUPABASE_SERVICE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const TDX_CLIENT_ID     = process.env.TDX_CLIENT_ID;
 const TDX_CLIENT_SECRET = process.env.TDX_CLIENT_SECRET;
+
+const FETCH_DELAY = 3000; // 3s between each request (TDX free tier is restrictive)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Step 1 — Obtain TDX Access Token (client_credentials flow)
@@ -65,160 +66,223 @@ async function getTdxAccessToken() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 2 — TDX API Endpoints
-// Always append ?$format=GEOJSON to receive GeoJSON FeatureCollections.
-// ─────────────────────────────────────────────────────────────────────────────
-// TDX Rail V3 API base paths:
-//   Taiwan Railways (台鐵)   : /v3/Rail/TRA
-//   High Speed Rail (高鐵)   : /v3/Rail/THSR
-//   Taipei Metro (台北捷運)  : /v3/Rail/Metro/TRTC
-//   Taoyuan Metro (桃園捷運) : /v3/Rail/Metro/TYMC
-//   Kaohsiung Metro (高雄捷運): /v3/Rail/Metro/KRTC
-//   Taichung MRT (台中捷運)  : /v3/Rail/Metro/TMRT
+// Step 2 — TDX API Endpoints (v2, $format=JSON)
 //
-// NOTE: Not all metro systems expose full GeoJSON shape endpoints.
-//       Check the TDX API documentation for the exact paths.
+// TDX Rail V2 API base paths:
+//   台鐵 TRA               : /v2/Rail/TRA
+//   高鐵 THSR              : /v2/Rail/THSR
+//   台北捷運 TRTC           : /v2/Rail/Metro/.../TRTC
+//   桃園捷運 TYMC           : /v2/Rail/Metro/.../TYMC
+//   高雄捷運 KRTC           : /v2/Rail/Metro/.../KRTC
+//   台中捷運 TMRT           : /v2/Rail/Metro/.../TMRT
+//   新北捷運 NTMC           : /v2/Rail/Metro/.../NTMC
+//   高雄輕軌 KLRT           : /v2/Rail/Metro/.../KLRT
+//   淡海輕軌 NTDLRT         : /v2/Rail/Metro/.../NTDLRT  → mapped to NTMC
+//   安坑輕軌 NTALRT         : /v2/Rail/Metro/.../NTALRT  → mapped to NTMC
+// ─────────────────────────────────────────────────────────────────────────────
 const TDX_ENDPOINTS = {
-  // Stations (Point geometries)
-  TRA_STATIONS:   `${TDX_BASE_URL}/v3/Rail/TRA/Station?$format=GEOJSON`,
-  THSR_STATIONS:  `${TDX_BASE_URL}/v3/Rail/THSR/Station?$format=GEOJSON`,
-  TRTC_STATIONS:  `${TDX_BASE_URL}/v3/Rail/Metro/Station/TRTC?$format=GEOJSON`,
-  TYMC_STATIONS:  `${TDX_BASE_URL}/v3/Rail/Metro/Station/TYMC?$format=GEOJSON`,
-  KRTC_STATIONS:  `${TDX_BASE_URL}/v3/Rail/Metro/Station/KRTC?$format=GEOJSON`,
-  TMRT_STATIONS:  `${TDX_BASE_URL}/v3/Rail/Metro/Station/TMRT?$format=GEOJSON`,
+  // Stations (return JSON arrays of station objects)
+  TRA_STATIONS:     `${TDX_BASE_URL}/v2/Rail/TRA/Station?$format=JSON`,
+  THSR_STATIONS:    `${TDX_BASE_URL}/v2/Rail/THSR/Station?$format=JSON`,
+  TRTC_STATIONS:    `${TDX_BASE_URL}/v2/Rail/Metro/Station/TRTC?$format=JSON`,
+  TYMC_STATIONS:    `${TDX_BASE_URL}/v2/Rail/Metro/Station/TYMC?$format=JSON`,
+  KRTC_STATIONS:    `${TDX_BASE_URL}/v2/Rail/Metro/Station/KRTC?$format=JSON`,
+  TMRT_STATIONS:    `${TDX_BASE_URL}/v2/Rail/Metro/Station/TMRT?$format=JSON`,
+  NTMC_STATIONS:    `${TDX_BASE_URL}/v2/Rail/Metro/Station/NTMC?$format=JSON`,
+  KLRT_STATIONS:    `${TDX_BASE_URL}/v2/Rail/Metro/Station/KLRT?$format=JSON`,
+  NTDLRT_STATIONS:  `${TDX_BASE_URL}/v2/Rail/Metro/Station/NTDLRT?$format=JSON`,
+  NTALRT_STATIONS:  `${TDX_BASE_URL}/v2/Rail/Metro/Station/NTALRT?$format=JSON`,
 
-  // Lines / shapes (LineString / MultiLineString geometries)
-  TRA_LINES:      `${TDX_BASE_URL}/v3/Rail/TRA/Shape?$format=GEOJSON`,
-  THSR_LINES:     `${TDX_BASE_URL}/v3/Rail/THSR/Shape?$format=GEOJSON`,
-  TRTC_LINES:     `${TDX_BASE_URL}/v3/Rail/Metro/Shape/TRTC?$format=GEOJSON`,
-  TYMC_LINES:     `${TDX_BASE_URL}/v3/Rail/Metro/Shape/TYMC?$format=GEOJSON`,
-  KRTC_LINES:     `${TDX_BASE_URL}/v3/Rail/Metro/Shape/KRTC?$format=GEOJSON`,
-  TMRT_LINES:     `${TDX_BASE_URL}/v3/Rail/Metro/Shape/TMRT?$format=GEOJSON`,
+  // Lines / shapes (return JSON arrays of shape objects with WKT Geometry)
+  TRA_LINES:        `${TDX_BASE_URL}/v2/Rail/TRA/Shape?$format=JSON`,
+  THSR_LINES:       `${TDX_BASE_URL}/v2/Rail/THSR/Shape?$format=JSON`,
+  TRTC_LINES:       `${TDX_BASE_URL}/v2/Rail/Metro/Shape/TRTC?$format=JSON`,
+  TYMC_LINES:       `${TDX_BASE_URL}/v2/Rail/Metro/Shape/TYMC?$format=JSON`,
+  KRTC_LINES:       `${TDX_BASE_URL}/v2/Rail/Metro/Shape/KRTC?$format=JSON`,
+  TMRT_LINES:       `${TDX_BASE_URL}/v2/Rail/Metro/Shape/TMRT?$format=JSON`,
+  NTMC_LINES:       `${TDX_BASE_URL}/v2/Rail/Metro/Shape/NTMC?$format=JSON`,
+  KLRT_LINES:       `${TDX_BASE_URL}/v2/Rail/Metro/Shape/KLRT?$format=JSON`,
+  NTDLRT_LINES:     `${TDX_BASE_URL}/v2/Rail/Metro/Shape/NTDLRT?$format=JSON`,
+  NTALRT_LINES:     `${TDX_BASE_URL}/v2/Rail/Metro/Shape/NTALRT?$format=JSON`,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 3 — Fetch a GeoJSON endpoint with the Bearer token
+// Step 3 — Fetch a JSON endpoint with the Bearer token
+//           Includes retry with backoff for 429 rate-limit errors.
 // ─────────────────────────────────────────────────────────────────────────────
-async function fetchGeoJSON(url, accessToken) {
-  console.log(`  Fetching: ${url}`);
-  const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+function delay(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-  if (!res.ok) {
+async function fetchJSON(url, accessToken, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    console.log(`  Fetching (attempt ${attempt}): ${url}`);
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const count = Array.isArray(json) ? json.length : 0;
+      console.log(`    → ${res.status} OK — ${count} records`);
+      return json;
+    }
+
+    if (res.status === 429 && attempt < retries) {
+      const wait = 3000 * attempt; // 3s, 6s, 9s
+      console.warn(`  ⚠️  429 rate-limited — retrying in ${wait}ms…`);
+      await delay(wait);
+      continue;
+    }
+
     console.warn(`  ⚠️  ${url} → ${res.status} — skipping`);
     return null;
   }
-
-  return res.json();
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 4 — Parse and insert station features
+// WKT Parser — converts WKT LINESTRING / MULTILINESTRING to GeoJSON
 //
-// TDX GeoJSON station feature structure (approximate):
-// {
-//   type: 'Feature',
-//   geometry: { type: 'Point', coordinates: [lng, lat] },
-//   properties: {
-//     StationID: 'TRA-001',
-//     StationName: { Zh_tw: '台北', En: 'Taipei' },
-//     LineID: 'TRA-WestLine',
-//     ...
-//   }
-// }
+// WKT format:
+//   LINESTRING(lon lat, lon lat, ...)
+//   MULTILINESTRING((lon lat, lon lat, ...), (lon lat, lon lat, ...))
 //
-// Adapt the field mappings below to match the actual TDX response schema.
+// Output: { type: "MultiLineString", coordinates: [[[lon,lat], ...], ...] }
 // ─────────────────────────────────────────────────────────────────────────────
-async function insertStations(supabase, featureCollection, systemType) {
-  if (!featureCollection?.features?.length) {
-    console.log(`  No station features for ${systemType}`);
+function parseWKT(wkt) {
+  if (!wkt || typeof wkt !== 'string') return null;
+
+  const trimmed = wkt.trim();
+
+  try {
+    if (trimmed.startsWith('MULTILINESTRING')) {
+      // Extract everything inside the outer parentheses
+      const outer = trimmed.replace(/^MULTILINESTRING\s*\(\s*/, '').replace(/\s*\)$/, '');
+      // Split into individual rings by "),("
+      const rings = outer.split(/\)\s*,\s*\(/);
+      const coordinates = rings.map((ring) => {
+        const clean = ring.replace(/^\(/, '').replace(/\)$/, '');
+        return clean.split(',').map((pair) => {
+          const [lon, lat] = pair.trim().split(/\s+/).map(Number);
+          return [lon, lat];
+        });
+      });
+      return { type: 'MultiLineString', coordinates };
+    }
+
+    if (trimmed.startsWith('LINESTRING')) {
+      const inner = trimmed.replace(/^LINESTRING\s*\(\s*/, '').replace(/\s*\)$/, '');
+      const coordinates = inner.split(',').map((pair) => {
+        const [lon, lat] = pair.trim().split(/\s+/).map(Number);
+        return [lon, lat];
+      });
+      return { type: 'MultiLineString', coordinates: [coordinates] };
+    }
+  } catch (e) {
+    console.warn(`  ⚠️  WKT parse error: ${e.message}`);
+    return null;
+  }
+
+  console.warn(`  ⚠️  Unsupported WKT type: ${trimmed.substring(0, 30)}…`);
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 4 — Parse and insert station data
+//
+// TDX JSON station object:
+// {
+//   StationUID: "TRA-1000",
+//   StationID: "1000",
+//   StationName: { Zh_tw: "基隆", En: "Keelung" },
+//   StationPosition: { PositionLon: 121.74, PositionLat: 25.13 },
+//   ...
+// }
+// ─────────────────────────────────────────────────────────────────────────────
+async function insertStations(supabase, stationsArray, dbSystemType) {
+  if (!Array.isArray(stationsArray) || !stationsArray.length) {
+    console.log(`  No station data for ${dbSystemType}`);
     return;
   }
 
-  const rows = featureCollection.features
-    .filter((f) => f.geometry?.type === 'Point')
-    .map((f) => ({
-      station_id:   f.properties.StationID ?? f.properties.station_id ?? '',
-      station_name: f.properties.StationName?.Zh_tw ?? f.properties.station_name ?? '',
-      system_type:  systemType,
-      line_id:      f.properties.LineID ?? f.properties.line_id ?? '',
-      // Pass the geometry object directly; the RPC will call ST_GeomFromGeoJSON on the server side.
-      geom:         f.geometry,
-      established_year: f.properties.EstablishedYear ?? f.properties.established_year ?? null,
-      history_desc: f.properties.HistoryDescription ?? f.properties.history_desc ?? null,
-      history_image_url: f.properties.HistoryImageURL ?? f.properties.history_image_url ?? null,
+  const rows = stationsArray
+    .filter((s) => {
+      const pos = s.StationPosition;
+      return pos && typeof pos.PositionLon === 'number' && typeof pos.PositionLat === 'number';
+    })
+    .map((s) => ({
+      station_id:        s.StationUID || s.StationID || '',
+      station_name:      s.StationName?.Zh_tw || '',
+      system_type:       dbSystemType,
+      line_id:           s.LineID || '',
+      geom:              {
+        type: 'Point',
+        coordinates: [s.StationPosition.PositionLon, s.StationPosition.PositionLat],
+      },
+      established_year:  null,
+      history_desc:      null,
+      history_image_url: null,
+      badge_image_url:   null,
     }));
 
-  console.log(`  ${systemType} stations parsed: ${rows.length} features`);
+  console.log(`  ${dbSystemType} stations parsed: ${rows.length} rows`);
   if (!rows.length) return;
 
   try {
     const { error } = await supabase.rpc('insert_stations_bulk', { rows: JSON.stringify(rows) });
     if (error) {
-      console.error(`  ❌  insert_stations_bulk error for ${systemType}:`, error);
+      console.error(`  ❌  insert_stations_bulk error for ${dbSystemType}:`, error);
     } else {
-      console.log(`  ✅  insert_stations_bulk succeeded for ${systemType} (${rows.length} rows)`);
+      console.log(`  ✅  insert_stations_bulk succeeded for ${dbSystemType} (${rows.length} rows)`);
     }
   } catch (err) {
-    console.error(`  ❌  RPC call failed for ${systemType}:`, err);
+    console.error(`  ❌  RPC call failed for ${dbSystemType}:`, err);
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 5 — Parse and insert line features
+// Step 5 — Parse and insert line/shape data
 //
-// TDX GeoJSON line feature structure (approximate):
+// TDX JSON shape object:
 // {
-//   type: 'Feature',
-//   geometry: { type: 'LineString' | 'MultiLineString', coordinates: … },
-//   properties: {
-//     LineID: 'TRA-WestLine',
-//     LineName: { Zh_tw: '縱貫線', En: 'Western Line' },
-//     ...
-//   }
+//   LineNo: "WL",
+//   LineID: "WL",
+//   LineName: { Zh_tw: "西部幹線", En: "Western Line" },
+//   Geometry: "MULTILINESTRING((121.74 25.13, 121.75 25.14, ...))",
+//   ...
 // }
 // ─────────────────────────────────────────────────────────────────────────────
-async function insertLines(supabase, featureCollection, systemType, colorHex) {
-  if (!featureCollection?.features?.length) {
-    console.log(`  No line features for ${systemType}`);
+async function insertLines(supabase, shapesArray, dbSystemType, colorHex) {
+  if (!Array.isArray(shapesArray) || !shapesArray.length) {
+    console.log(`  No line/shape data for ${dbSystemType}`);
     return;
   }
 
-  const rows = featureCollection.features
-    .filter((f) => ['LineString', 'MultiLineString'].includes(f.geometry?.type))
-    .map((f) => {
-      // Normalise LineString → MultiLineString for the DB schema
-      const geomJson =
-        f.geometry.type === 'LineString'
-          ? {
-              type: 'MultiLineString',
-              coordinates: [f.geometry.coordinates],
-            }
-          : f.geometry;
-
+  const rows = shapesArray
+    .map((s) => {
+      const geom = parseWKT(s.Geometry);
       return {
-        line_id:     f.properties.LineID ?? f.properties.line_id ?? '',
-        line_name:   f.properties.LineName?.Zh_tw ?? f.properties.line_name ?? '',
-        system_type: systemType,
-        color_hex:   colorHex,
-        geom:        geomJson,
-        history_desc: f.properties.HistoryDescription ?? f.properties.history_desc ?? null,
+        line_id:      s.LineID || s.LineNo || '',
+        line_name:    s.LineName?.Zh_tw || '',
+        system_type:  dbSystemType,
+        color_hex:    colorHex,
+        geom:         geom,
+        history_desc: null,
       };
-    });
+    })
+    .filter((r) => r.geom !== null);
 
-  console.log(`  ${systemType} lines parsed: ${rows.length} features`);
+  console.log(`  ${dbSystemType} lines parsed: ${rows.length} rows`);
   if (!rows.length) return;
 
   try {
     const { error } = await supabase.rpc('insert_lines_bulk', { rows: JSON.stringify(rows) });
     if (error) {
-      console.error(`  ❌  insert_lines_bulk error for ${systemType}:`, error);
+      console.error(`  ❌  insert_lines_bulk error for ${dbSystemType}:`, error);
     } else {
-      console.log(`  ✅  insert_lines_bulk succeeded for ${systemType} (${rows.length} rows)`);
+      console.log(`  ✅  insert_lines_bulk succeeded for ${dbSystemType} (${rows.length} rows)`);
     }
   } catch (err) {
-    console.error(`  ❌  RPC call failed for ${systemType}:`, err);
+    console.error(`  ❌  RPC call failed for ${dbSystemType}:`, err);
   }
 }
 
@@ -237,7 +301,7 @@ const SYSTEM_COLORS = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main entry point
+// CLI args
 // ─────────────────────────────────────────────────────────────────────────────
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -254,19 +318,32 @@ function parseArgs() {
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: merge multiple JSON arrays (some may be null)
+// ─────────────────────────────────────────────────────────────────────────────
+function mergeArrays(...arrays) {
+  const result = [];
+  for (const arr of arrays) {
+    if (Array.isArray(arr)) result.push(...arr);
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main entry point
+// ─────────────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🚂  Rail Stamp Rally — TDX data ingestion script');
   console.log('─'.repeat(60));
-  // Parse CLI args
   const opts = parseArgs();
 
-  // Initialise Supabase client (required for any DB operation)
+  // Initialise Supabase client
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     throw new Error('Supabase URL/key must be set in .env.local');
   }
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  // If using local/mock data, skip TDX token and network fetches
+  // ── Local / mock mode ───────────────────────────────────────────────────
   if (opts.useMock || opts.localFile) {
     if (!opts.dryRun && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Writing to Supabase requires SUPABASE_SERVICE_ROLE_KEY (set in .env.local).');
@@ -284,13 +361,12 @@ async function main() {
     const raw = fs.readFileSync(localPath, 'utf8');
     const local = JSON.parse(raw);
 
-    // Build per-system feature collections for stations/lines
-    const systems = ['TRA','HSR','TRTC','TYMC','KRTC','TMRT'];
+    const systems = ['TRA','HSR','TRTC','TYMC','KRTC','TMRT','NTMC','KLRT'];
     const stationsBySystem = {};
     const linesBySystem = {};
     systems.forEach((s) => {
-      stationsBySystem[s] = { type: 'FeatureCollection', features: [] };
-      linesBySystem[s] = { type: 'FeatureCollection', features: [] };
+      stationsBySystem[s] = [];
+      linesBySystem[s] = [];
     });
 
     for (const feat of (local.features || [])) {
@@ -298,56 +374,60 @@ async function main() {
       const sys = (props.system_type || props.systemType || 'TRA').toUpperCase();
       if (!systems.includes(sys)) continue;
 
-      if ((props.feature_type || props.featureType || '').toLowerCase() === 'station') {
-        // Normalize to TDX-like properties expected by insertStations
-        const f = {
-          type: 'Feature',
-          geometry: feat.geometry,
-          properties: {
-            StationID: props.id ?? props.station_id ?? props.stationId ?? '',
-            StationName: { Zh_tw: props.name ?? props.station_name ?? '' },
-            LineID: props.line_id ?? props.lineId ?? '',
-            EstablishedYear: props.established_year ?? props.establishedYear ?? null,
-            HistoryDescription: props.history_desc ?? props.historyDesc ?? null,
-            HistoryImageURL: props.history_image_url ?? props.historyImageUrl ?? null,
+      const ft = (props.feature_type || props.featureType || '').toLowerCase();
+      if (ft === 'station') {
+        stationsBySystem[sys].push({
+          StationUID: props.id ?? props.station_id ?? props.stationId ?? '',
+          StationID: props.id ?? props.station_id ?? props.stationId ?? '',
+          StationName: { Zh_tw: props.name ?? props.station_name ?? '' },
+          StationPosition: {
+            PositionLon: feat.geometry?.coordinates?.[0],
+            PositionLat: feat.geometry?.coordinates?.[1],
           },
-        };
-        stationsBySystem[sys].features.push(f);
-      } else if ((props.feature_type || props.featureType || '').toLowerCase() === 'line') {
+          LineID: props.line_id ?? props.lineId ?? '',
+        });
+      } else if (ft === 'line') {
         const geom = feat.geometry;
-        const geomJson = geom.type === 'LineString'
+        const geomJson = geom?.type === 'LineString'
           ? { type: 'MultiLineString', coordinates: [geom.coordinates] }
           : geom;
 
-        const f = {
-          type: 'Feature',
-          geometry: geomJson,
-          properties: {
-            LineID: props.id ?? props.line_id ?? props.lineId ?? '',
-            LineName: { Zh_tw: props.name ?? props.line_name ?? '' },
-            ColorHex: props.color_hex ?? props.colorHex ?? null,
-            HistoryDescription: props.history_desc ?? props.historyDesc ?? null,
-          },
-        };
-        linesBySystem[sys].features.push(f);
+        linesBySystem[sys].push({
+          LineID: props.id ?? props.line_id ?? props.lineId ?? '',
+          LineName: { Zh_tw: props.name ?? props.line_name ?? '' },
+          _geomOverride: geomJson,
+        });
       }
     }
 
-    // Insert or dry-run
     console.log('\n📍  Processing local stations…');
     for (const s of systems) {
-      const fc = stationsBySystem[s];
-      if (!fc.features.length) continue;
-      console.log(`  ${s} stations parsed: ${fc.features.length}`);
-      if (!opts.dryRun) await insertStations(supabase, fc, s);
+      if (!stationsBySystem[s].length) continue;
+      console.log(`  ${s} stations: ${stationsBySystem[s].length}`);
+      if (!opts.dryRun) await insertStations(supabase, stationsBySystem[s], s);
     }
 
     console.log('\n🛤   Processing local lines…');
     for (const s of systems) {
-      const fc = linesBySystem[s];
-      if (!fc.features.length) continue;
-      console.log(`  ${s} lines parsed: ${fc.features.length}`);
-      if (!opts.dryRun) await insertLines(supabase, fc, s, SYSTEM_COLORS[s]);
+      if (!linesBySystem[s].length) continue;
+      const rows = linesBySystem[s].map((ms) => ({
+        line_id:      ms.LineID || '',
+        line_name:    ms.LineName?.Zh_tw || '',
+        system_type:  s,
+        color_hex:    SYSTEM_COLORS[s],
+        geom:         ms._geomOverride,
+        history_desc: null,
+      })).filter((r) => r.geom != null);
+      console.log(`  ${s} lines: ${rows.length}`);
+      if (!opts.dryRun) {
+        try {
+          const { error } = await supabase.rpc('insert_lines_bulk', { rows: JSON.stringify(rows) });
+          if (error) console.error(`  ❌  insert_lines_bulk error for ${s}:`, error);
+          else console.log(`  ✅  insert_lines_bulk succeeded for ${s} (${rows.length} rows)`);
+        } catch (err) {
+          console.error(`  ❌  RPC call failed for ${s}:`, err);
+        }
+      }
     }
 
     console.log('\n✅  Local ingestion complete.');
@@ -355,60 +435,72 @@ async function main() {
     return;
   }
 
-  // Validate environment for live TDX fetch
+  // ── Live TDX fetch mode ─────────────────────────────────────────────────
   if (!TDX_CLIENT_ID || !TDX_CLIENT_SECRET) {
     throw new Error('TDX_CLIENT_ID and TDX_CLIENT_SECRET must be set in .env.local');
   }
 
-  // Step 1 — Get TDX token
   const token = await getTdxAccessToken();
 
-  // Step 2 — Fetch all datasets in parallel
-  console.log('\n📡  Fetching GeoJSON from TDX API…');
-  const [
-    traStations, thsrStations, trtcStations, tymcStations, krtcStations, tmrtStations,
-    traLines,    thsrLines,    trtcLines,    tymcLines,    krtcLines,    tmrtLines,
-  ] = await Promise.all([
-    fetchGeoJSON(TDX_ENDPOINTS.TRA_STATIONS,  token),
-    fetchGeoJSON(TDX_ENDPOINTS.THSR_STATIONS, token),
-    fetchGeoJSON(TDX_ENDPOINTS.TRTC_STATIONS, token),
-    fetchGeoJSON(TDX_ENDPOINTS.TYMC_STATIONS, token),
-    fetchGeoJSON(TDX_ENDPOINTS.KRTC_STATIONS, token),
-    fetchGeoJSON(TDX_ENDPOINTS.TMRT_STATIONS, token),
-    fetchGeoJSON(TDX_ENDPOINTS.TRA_LINES,     token),
-    fetchGeoJSON(TDX_ENDPOINTS.THSR_LINES,    token),
-    fetchGeoJSON(TDX_ENDPOINTS.TRTC_LINES,    token),
-    fetchGeoJSON(TDX_ENDPOINTS.TYMC_LINES,    token),
-    fetchGeoJSON(TDX_ENDPOINTS.KRTC_LINES,    token),
-    fetchGeoJSON(TDX_ENDPOINTS.TMRT_LINES,    token),
-  ]);
+  console.log('\n📡  Fetching JSON from TDX API v2 (sequential with 3s delays)…');
 
-  // Step 3 — Parse & insert stations
-  console.log('\n📍  Processing stations…');
+  // ── Stations ────────────────────────────────────────────────────────────
+  console.log('\n📍  Fetching stations…');
+
+  const traStations  = await fetchJSON(TDX_ENDPOINTS.TRA_STATIONS,  token); await delay(FETCH_DELAY);
+  const thsrStations = await fetchJSON(TDX_ENDPOINTS.THSR_STATIONS, token); await delay(FETCH_DELAY);
+  const trtcStations = await fetchJSON(TDX_ENDPOINTS.TRTC_STATIONS, token); await delay(FETCH_DELAY);
+  const tymcStations = await fetchJSON(TDX_ENDPOINTS.TYMC_STATIONS, token); await delay(FETCH_DELAY);
+  const krtcStations = await fetchJSON(TDX_ENDPOINTS.KRTC_STATIONS, token); await delay(FETCH_DELAY);
+  const tmrtStations = await fetchJSON(TDX_ENDPOINTS.TMRT_STATIONS, token); await delay(FETCH_DELAY);
+  const klrtStations = await fetchJSON(TDX_ENDPOINTS.KLRT_STATIONS, token); await delay(FETCH_DELAY);
+
+  // NTMC: merge NTMC + NTDLRT + NTALRT
+  const ntmcStationsRaw   = await fetchJSON(TDX_ENDPOINTS.NTMC_STATIONS,   token); await delay(FETCH_DELAY);
+  const ntdlrtStationsRaw = await fetchJSON(TDX_ENDPOINTS.NTDLRT_STATIONS, token); await delay(FETCH_DELAY);
+  const ntalrtStationsRaw = await fetchJSON(TDX_ENDPOINTS.NTALRT_STATIONS, token); await delay(FETCH_DELAY);
+  const ntmcStations = mergeArrays(ntmcStationsRaw, ntdlrtStationsRaw, ntalrtStationsRaw);
+
+  // ── Lines / Shapes ──────────────────────────────────────────────────────
+  console.log('\n🛤   Fetching shapes…');
+
+  const traLines  = await fetchJSON(TDX_ENDPOINTS.TRA_LINES,  token); await delay(FETCH_DELAY);
+  const thsrLines = await fetchJSON(TDX_ENDPOINTS.THSR_LINES, token); await delay(FETCH_DELAY);
+  const trtcLines = await fetchJSON(TDX_ENDPOINTS.TRTC_LINES, token); await delay(FETCH_DELAY);
+  const tymcLines = await fetchJSON(TDX_ENDPOINTS.TYMC_LINES, token); await delay(FETCH_DELAY);
+  const krtcLines = await fetchJSON(TDX_ENDPOINTS.KRTC_LINES, token); await delay(FETCH_DELAY);
+  const tmrtLines = await fetchJSON(TDX_ENDPOINTS.TMRT_LINES, token); await delay(FETCH_DELAY);
+  const klrtLines = await fetchJSON(TDX_ENDPOINTS.KLRT_LINES, token); await delay(FETCH_DELAY);
+
+  // NTMC lines: merge NTMC + NTDLRT + NTALRT
+  const ntmcLinesRaw   = await fetchJSON(TDX_ENDPOINTS.NTMC_LINES,   token); await delay(FETCH_DELAY);
+  const ntdlrtLinesRaw = await fetchJSON(TDX_ENDPOINTS.NTDLRT_LINES, token); await delay(FETCH_DELAY);
+  const ntalrtLinesRaw = await fetchJSON(TDX_ENDPOINTS.NTALRT_LINES, token);
+  const ntmcLines = mergeArrays(ntmcLinesRaw, ntdlrtLinesRaw, ntalrtLinesRaw);
+
+  // ── Insert stations ─────────────────────────────────────────────────────
+  console.log('\n📍  Inserting stations into Supabase…');
   await insertStations(supabase, traStations,  'TRA');
-  await insertStations(supabase, thsrStations, 'HSR');
+  await insertStations(supabase, thsrStations, 'HSR');   // TDX THSR → DB HSR
   await insertStations(supabase, trtcStations, 'TRTC');
   await insertStations(supabase, tymcStations, 'TYMC');
   await insertStations(supabase, krtcStations, 'KRTC');
   await insertStations(supabase, tmrtStations, 'TMRT');
+  await insertStations(supabase, ntmcStations, 'NTMC');  // Merged NTMC + NTDLRT + NTALRT
+  await insertStations(supabase, klrtStations, 'KLRT');
 
-  // Step 4 — Parse & insert lines
-  console.log('\n🛤   Processing lines…');
+  // ── Insert lines ────────────────────────────────────────────────────────
+  console.log('\n🛤   Inserting lines into Supabase…');
   await insertLines(supabase, traLines,  'TRA',  SYSTEM_COLORS.TRA);
   await insertLines(supabase, thsrLines, 'HSR',  SYSTEM_COLORS.HSR);
   await insertLines(supabase, trtcLines, 'TRTC', SYSTEM_COLORS.TRTC);
   await insertLines(supabase, tymcLines, 'TYMC', SYSTEM_COLORS.TYMC);
   await insertLines(supabase, krtcLines, 'KRTC', SYSTEM_COLORS.KRTC);
   await insertLines(supabase, tmrtLines, 'TMRT', SYSTEM_COLORS.TMRT);
+  await insertLines(supabase, ntmcLines, 'NTMC', SYSTEM_COLORS.NTMC);
+  await insertLines(supabase, klrtLines, 'KLRT', SYSTEM_COLORS.KLRT);
 
   console.log('\n✅  Ingestion script complete.');
-  console.log(
-    'NOTE: The geom column inserts above are placeholder stubs.\n' +
-    '      To actually write to Supabase you should:\n' +
-    '      a) Call a Supabase Edge Function that runs the SQL, OR\n' +
-    '      b) Use a direct psql connection with the service-role password\n' +
-    '         and run: INSERT INTO railway_stations … VALUES … ST_GeomFromGeoJSON(…)',
-  );
 }
 
 main().catch((err) => {
