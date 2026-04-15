@@ -5,6 +5,8 @@
 -- Enable the PostGIS extension (spatial data)
 -- ─────────────────────────────────────────────
 CREATE EXTENSION IF NOT EXISTS postgis;
+-- Needed for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ─────────────────────────────────────────────
 -- Shared enum for railway system types
@@ -64,6 +66,10 @@ CREATE TABLE IF NOT EXISTS railway_lines (
 -- Index on line_id for fast lookup by line code
 CREATE INDEX IF NOT EXISTS idx_railway_lines_line_id
   ON railway_lines (line_id);
+
+-- Ensure unique constraints for idempotent upserts by station/line code
+CREATE UNIQUE INDEX IF NOT EXISTS uq_railway_stations_station_system ON railway_stations (station_id, system_type);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_railway_lines_line_system ON railway_lines (line_id, system_type);
 
 -- GiST spatial index for geography queries
 CREATE INDEX IF NOT EXISTS idx_railway_lines_geom
@@ -161,6 +167,67 @@ CREATE POLICY "Public read lines"
 -- so no extra INSERT/UPDATE policy is needed for it.
 
 -- ─────────────────────────────────────────────
+-- Bulk insert RPCs used by the ingestion script
+-- Accepts a JSON array of objects and performs idempotent upserts
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION insert_stations_bulk(rows json)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO railway_stations (
+    station_id, station_name, system_type, line_id, geom,
+    established_year, history_desc, history_image_url
+  )
+  SELECT
+    elem->>'station_id',
+    COALESCE(elem->>'station_name',''),
+    (elem->>'system_type')::railway_system_type,
+    elem->>'line_id',
+    ST_SetSRID(ST_GeomFromGeoJSON((elem->'geom')::text), 4326),
+    NULLIF(elem->>'established_year','')::int,
+    elem->>'history_desc',
+    elem->>'history_image_url'
+  FROM json_array_elements(rows) AS arr(elem)
+  ON CONFLICT (station_id, system_type) DO UPDATE
+  SET
+    station_name = EXCLUDED.station_name,
+    line_id = EXCLUDED.line_id,
+    geom = EXCLUDED.geom,
+    established_year = EXCLUDED.established_year,
+    history_desc = EXCLUDED.history_desc,
+    history_image_url = EXCLUDED.history_image_url,
+    updated_at = NOW();
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION insert_lines_bulk(rows json)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  INSERT INTO railway_lines (
+    line_id, line_name, system_type, color_hex, geom, history_desc
+  )
+  SELECT
+    elem->>'line_id',
+    COALESCE(elem->>'line_name',''),
+    (elem->>'system_type')::railway_system_type,
+    COALESCE(elem->>'color_hex','#888888'),
+    ST_SetSRID(ST_GeomFromGeoJSON((elem->'geom')::text), 4326),
+    elem->>'history_desc'
+  FROM json_array_elements(rows) AS arr(elem)
+  ON CONFLICT (line_id, system_type) DO UPDATE
+  SET
+    line_name = EXCLUDED.line_name,
+    color_hex = EXCLUDED.color_hex,
+    geom = EXCLUDED.geom,
+    history_desc = EXCLUDED.history_desc,
+    updated_at = NOW();
+END;
+$$;
 -- Grants
 -- Allow the anon and authenticated roles (used by the Supabase JS client with
 -- the public anon key) to SELECT from both tables and to call the RPC function.

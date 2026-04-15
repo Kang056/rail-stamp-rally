@@ -93,3 +93,66 @@ Metro lines use a single solid coloured polyline.
 
 For very large datasets, the code includes a commented-out scaffold for
 switching to **geojson-vt + Leaflet.VectorGrid** tiled rendering.
+
+## Troubleshooting — RPC & RLS (常見問題與排錯)
+
+如果網頁載入時看到 PostgREST 錯誤，例如：
+
+```
+{
+    "code": "PGRST202",
+    "details": "Searched for the function public.get_all_railway_geojson without parameters ...",
+    "message": "Could not find the function public.get_all_railway_geojson without parameters in the schema cache"
+}
+```
+
+原因與處理步驟：
+
+- **可能原因 A — Function 未套用到資料庫**  
+    1. 在 Supabase 專案的 **SQL Editor** 執行下列查詢，確認函式是否存在：  
+         ```
+         SELECT n.nspname AS schema, p.proname AS name, pg_get_functiondef(p.oid) AS definition
+         FROM pg_proc p
+         JOIN pg_namespace n ON p.pronamespace = n.oid
+         WHERE p.proname = 'get_all_railway_geojson';
+         ```
+    2. 若查無結果，請在 SQL Editor 中執行 `supabase/schema.sql` 檔案內的 `CREATE OR REPLACE FUNCTION get_all_railway_geojson()` 區塊，然後再次執行上面的查詢。
+    3. 確認授權：  
+         ```
+         GRANT EXECUTE ON FUNCTION public.get_all_railway_geojson() TO anon, authenticated;
+         ```
+
+- **可能原因 B — PostgREST schema cache 未更新**  
+    - 若函式存在但仍顯示 PGRST202，請在 Supabase Dashboard 重載或重新啟動 API/服務（managed Supabase：Settings -> Database -> Restart / Rebuild schema；local: 停掉並重啟 `supabase` 服務），讓 PostgREST 重新載入 schema。
+
+關於啟用 Row Level Security (RLS) 時出現：
+
+```
+Failed to toggle RLS: Failed to run sql query: ERROR: 42501: must be owner of table spatial_ref_sys
+```
+
+原因與解法：
+
+- Supabase Dashboard 在某些 UI 操作（例如「Grant on all tables」或自動建立 policy）可能會對整個 `public` schema 下的所有 table 執行 GRANT/ALTER，這會包含 PostGIS 的系統表 `spatial_ref_sys`。該系統表由擁有者（通常為資料庫初始化者）管理，非擁有者的角色無法修改它，導致錯誤。
+
+- 安全做法（避免修改系統表）：  
+    - 不要執行 `GRANT ... ON ALL TABLES IN SCHEMA public ...`（會包含 `spatial_ref_sys`）。  
+    - 改以針對單一應用表明確執行下列語句（在 Supabase SQL Editor 執行）：  
+        ```
+        ALTER TABLE public.railway_stations ENABLE ROW LEVEL SECURITY;
+        CREATE POLICY "Public read stations"
+            ON public.railway_stations FOR SELECT USING (true);
+        GRANT SELECT ON public.railway_stations TO anon, authenticated;
+
+        ALTER TABLE public.railway_lines ENABLE ROW LEVEL SECURITY;
+        CREATE POLICY "Public read lines"
+            ON public.railway_lines FOR SELECT USING (true);
+        GRANT SELECT ON public.railway_lines TO anon, authenticated;
+        ```
+    - 這些語句只會影響你的應用表，不會觸碰 `spatial_ref_sys`，因此不會觸發「must be owner」權限錯誤。
+
+如果要我代為：我可以（選一項）
+- 幫你在 repo 加入更完整的排錯文件與可執行 SQL（已新增此段說明，可繼續建立獨立文件）
+- 或逐項檢查你 Supabase 專案（需要你提供權限或告訴我你已執行的 SQL 結果）
+
+請告訴我你要我接下來做哪一項。

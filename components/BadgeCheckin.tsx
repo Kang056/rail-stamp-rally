@@ -37,16 +37,19 @@ export default function BadgeCheckin({ onSuccess }: Props) {
         setError('請先登入才能打卡');
         return;
       }
-      const { data: rpcData, error: rpcErr } = await supabase.rpc('checkin', {
+
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('checkin', {
         user_lon: longitude,
         user_lat: latitude,
         user_id: user.id,
       });
-      if (rpcErr) {
+
+      if (rpcErr) {
         setError(rpcErr.message ?? '打卡失敗');
         return;
       }
-      const result = rpcData as any;
+
+      const result = rpcData as any;
       setBadgeImage(result?.badge_image_url ?? null);
       setMessage('打卡成功！');
       if (typeof onSuccess === 'function') onSuccess();
@@ -87,6 +90,7 @@ export default function BadgeCheckin({ onSuccess }: Props) {
       {message && (
         <div style={{ marginTop: 8, background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '6px 10px', borderRadius: 6, display: 'flex', alignItems: 'center', gap:8 }}>
           <span>{message}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           {badgeImage && <img src={badgeImage} alt="badge" style={{ width: 40, height:40, borderRadius:4, objectFit:'cover' }} />}
         </div>
       )}
