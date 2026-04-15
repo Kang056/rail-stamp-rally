@@ -69,6 +69,29 @@ function addFilmstripPolyline(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Zoom-aware sizing helpers
+//
+// Station circle radius scales with zoom level so features remain legible at
+// all zoom levels without cluttering the map at low zoom.
+// Badge icon size follows the same breakpoints, proportional to the radius.
+// ─────────────────────────────────────────────────────────────────────────────
+function getStationRadius(zoom: number): number {
+  if (zoom <= 8) return 12;
+  if (zoom <= 10) return 14;
+  if (zoom <= 12) return 16;
+  if (zoom <= 14) return 20;
+  return 24;
+}
+
+function getBadgeSize(zoom: number): number {
+  if (zoom <= 8) return 24;
+  if (zoom <= 10) return 28;
+  if (zoom <= 12) return 32;
+  if (zoom <= 14) return 40;
+  return 48;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MapComponent
 // ─────────────────────────────────────────────────────────────────────────────
 export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false }: MapProps) {
@@ -114,13 +137,6 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
       mapRef.current = map;
 
-      // Create/attach a feature layer group for geojson layers (so we can clear and re-add)
-      if (!(map as any).__featureLayer) {
-        (map as any).__featureLayer = L.layerGroup().addTo(map);
-      } else {
-        (map as any).__featureLayer.clearLayers();
-      }
-
       // ── Base tile layer (OpenStreetMap) ───────────────────────────────────
       const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution:
@@ -153,6 +169,10 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
       (map as any).__onCleanup = () => {
         window.removeEventListener('resize', onResize);
         tileLayer.off('load');
+        const zoomHandler = (map as any).__zoomHandler;
+        if (typeof zoomHandler === 'function') {
+          map.off('zoomend', zoomHandler);
+        }
       };
     });
 
@@ -199,7 +219,36 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 // For TRA and HSR lines the Filmstrip style is applied.
 // For MRT/metro lines a solid polyline is used.
 // Stations are rendered as CircleMarkers for canvas performance.
+// Three dedicated LayerGroups are used so that station circles and badge icons
+// can be resized on zoom without touching the line layer.
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface BadgeEntry {
+  lat: number;
+  lng: number;
+  badgeSvg: string;
+}
+
+function renderBadgeLayer(
+  L: typeof import('leaflet'),
+  badgeLayer: any,
+  badgeEntries: BadgeEntry[],
+  zoom: number,
+) {
+  badgeLayer.clearLayers();
+  const badgeSize = getBadgeSize(zoom);
+  badgeEntries.forEach(({ lat, lng, badgeSvg }) => {
+    const encoded = encodeURIComponent(badgeSvg);
+    const badgeIcon = L.divIcon({
+      className: '',
+      html: `<img src="data:image/svg+xml,${encoded}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
+      iconSize: [badgeSize, badgeSize],
+      iconAnchor: [badgeSize / 2, badgeSize / 2],
+    });
+    L.marker([lat, lng], { icon: badgeIcon, interactive: false }).addTo(badgeLayer);
+  });
+}
+
 function renderGeoJSON(
   L: typeof import('leaflet'),
   map: LeafletMap,
@@ -207,13 +256,23 @@ function renderGeoJSON(
   onFeatureClick: (properties: RailwayFeatureProperties) => void,
   showAllBadges: boolean = false,
 ) {
-  // Ensure a dedicated feature layer exists
-  let featureLayer: any = (map as any).__featureLayer;
-  if (!featureLayer) {
-    featureLayer = (map as any).__featureLayer = L.layerGroup().addTo(map);
+  // ── Ensure dedicated layer groups exist ────────────────────────────────
+  let lineLayer: any = (map as any).__lineLayer;
+  let stationLayer: any = (map as any).__stationLayer;
+  let badgeLayer: any = (map as any).__badgeLayer;
+
+  if (!lineLayer) {
+    lineLayer = (map as any).__lineLayer = L.layerGroup().addTo(map);
+    stationLayer = (map as any).__stationLayer = L.layerGroup().addTo(map);
+    badgeLayer = (map as any).__badgeLayer = L.layerGroup().addTo(map);
   } else {
-    featureLayer.clearLayers();
+    lineLayer.clearLayers();
+    stationLayer.clearLayers();
+    badgeLayer.clearLayers();
   }
+
+  // Store L on the map so the zoom handler (registered once) can access it
+  (map as any).__L = L;
 
   const lines = geojson.features.filter((f) => f.properties.feature_type === 'line');
   const stations = geojson.features.filter((f) => f.properties.feature_type === 'station');
@@ -240,26 +299,31 @@ function renderGeoJSON(
       if (isIntercity) {
         // Filmstrip style: HSR=orange-on-white, TRA=black-on-white per design spec §4.2
         const filmColor = props.system_type === 'HSR' ? '#db691d' : '#000000';
-        addFilmstripPolyline(L, featureLayer, coords, filmColor, () => onFeatureClick(props));
+        addFilmstripPolyline(L, lineLayer, coords, filmColor, () => onFeatureClick(props));
       } else {
         // Solid colored line for metro/MRT systems
         const latLngs = coords.map(([lng, lat]) => L.latLng(lat, lng));
         L.polyline(latLngs, { color, weight: 4, opacity: 0.85 })
           .on('click', () => onFeatureClick(props))
-          .addTo(featureLayer);
+          .addTo(lineLayer);
       }
     });
   });
 
   // ── Stations ─────────────────────────────────────────────────────────────
+  const zoom = map.getZoom();
+  const radius = getStationRadius(zoom);
+  const circleMarkers: import('leaflet').CircleMarker[] = [];
+  const badgeEntries: BadgeEntry[] = [];
+
   stations.forEach((feature) => {
     if (!feature.geometry || feature.geometry.type !== 'Point') return;
 
     const [lng, lat] = feature.geometry.coordinates as [number, number];
     const props = feature.properties;
 
-    L.circleMarker([lat, lng], {
-      radius: 24,
+    const cm = L.circleMarker([lat, lng], {
+      radius,
       fillColor: '#ffffff',
       color: '#333333',
       weight: 2,
@@ -267,22 +331,43 @@ function renderGeoJSON(
       fillOpacity: 1,
     })
       .on('click', () => onFeatureClick(props))
-      .addTo(featureLayer);
+      .addTo(stationLayer);
 
-    // Show badge overlay when showAllBadges is enabled
+    circleMarkers.push(cm);
+
+    // Collect badge data when showAllBadges is enabled
     if (showAllBadges && props.feature_type === 'station' && (props as any).badge_image_url) {
-      const badgeSvg = (props as any).badge_image_url as string;
-      const encoded = encodeURIComponent(badgeSvg);
-      const badgeIcon = L.divIcon({
-        className: '',
-        html: `<img src="data:image/svg+xml,${encoded}" style="width:36px;height:36px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
-      L.marker([lat, lng], { icon: badgeIcon, interactive: false })
-        .addTo(featureLayer);
+      badgeEntries.push({ lat, lng, badgeSvg: (props as any).badge_image_url as string });
     }
   });
+
+  // Render badge icons at the current zoom size
+  renderBadgeLayer(L, badgeLayer, badgeEntries, zoom);
+
+  // Store state on the map so the zoom handler can update sizes without re-fetching data
+  (map as any).__circleMarkers = circleMarkers;
+  (map as any).__badgeEntries = badgeEntries;
+
+  // ── Register zoom handler (once per map instance) ─────────────────────
+  if (!(map as any).__zoomHandler) {
+    const zoomHandler = () => {
+      const currentZoom = map.getZoom();
+      const newRadius = getStationRadius(currentZoom);
+
+      // Update circle marker radii in-place (no re-render needed)
+      ((map as any).__circleMarkers as import('leaflet').CircleMarker[] | undefined)
+        ?.forEach((cm) => cm.setRadius(newRadius));
+
+      // Re-render badge layer with updated icon size
+      const bl = (map as any).__badgeLayer;
+      const entries = (map as any).__badgeEntries as BadgeEntry[] | undefined;
+      if (bl && entries) {
+        renderBadgeLayer(L, bl, entries, currentZoom);
+      }
+    };
+    (map as any).__zoomHandler = zoomHandler;
+    map.on('zoomend', zoomHandler);
+  }
 
   // Ensure tiles/layout update after rendering
   try {
