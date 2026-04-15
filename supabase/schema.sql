@@ -228,3 +228,14 @@ BEGIN
     updated_at = NOW();
 END;
 $$;
+-- Grants
+-- Allow the anon and authenticated roles (used by the Supabase JS client with
+-- the public anon key) to SELECT from both tables and to call the RPC function.
+-- RLS policies above act as a row-level filter on top of these grants.
+-- Without these grants the browser client receives "permission denied" even
+-- though the RLS policies permit the rows.
+-- ─────────────────────────────────────────────
+GRANT SELECT ON railway_stations TO anon, authenticated;
+GRANT SELECT ON railway_lines    TO anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION get_all_railway_geojson() TO anon, authenticated;
