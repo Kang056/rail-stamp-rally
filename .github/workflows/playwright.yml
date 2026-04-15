@@ -31,7 +31,7 @@ jobs:
         run: npx playwright install --with-deps
       - name: Start production server
         run: |
-          nohup npm run start &
+          nohup npx serve out -p 3000 &
           npx wait-on http://localhost:3000 --timeout 15000
       - name: Run Playwright tests
         run: npx playwright test --config=playwright.config.js --reporter=list
