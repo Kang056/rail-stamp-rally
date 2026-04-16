@@ -76,6 +76,16 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
 
+  // Keep refs up-to-date so the async Leaflet init callback always uses the
+  // latest prop values, even if they arrive before the map is ready.
+  // Updating refs directly in render is intentional — ref writes never cause re-renders.
+  const geojsonRef = useRef(geojson);
+  const onFeatureClickRef = useRef(onFeatureClick);
+  const showAllBadgesRef = useRef(showAllBadges);
+  geojsonRef.current = geojson;
+  onFeatureClickRef.current = onFeatureClick;
+  showAllBadgesRef.current = showAllBadges;
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
     initializingRef.current = true;
@@ -145,8 +155,10 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
       window.addEventListener('resize', onResize);
 
       // ── Render GeoJSON features ──────────────────────────────────────────
-      if (geojson) {
-        renderGeoJSON(L, map, geojson, onFeatureClick, showAllBadges);
+      // Use refs here so we pick up any geojson that arrived while Leaflet
+      // was still loading (fixes the async race condition on mobile).
+      if (geojsonRef.current) {
+        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current);
       }
 
       // attach cleanup hooks
