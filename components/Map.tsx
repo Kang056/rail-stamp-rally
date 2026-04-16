@@ -99,6 +99,16 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
 
+  // Keep refs up-to-date so the async Leaflet init callback always uses the
+  // latest prop values, even if they arrive before the map is ready.
+  // Updating refs directly in render is intentional — ref writes never cause re-renders.
+  const geojsonRef = useRef(geojson);
+  const onFeatureClickRef = useRef(onFeatureClick);
+  const showAllBadgesRef = useRef(showAllBadges);
+  geojsonRef.current = geojson;
+  onFeatureClickRef.current = onFeatureClick;
+  showAllBadgesRef.current = showAllBadges;
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
     initializingRef.current = true;
@@ -161,8 +171,10 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
       window.addEventListener('resize', onResize);
 
       // ── Render GeoJSON features ──────────────────────────────────────────
-      if (geojson) {
-        renderGeoJSON(L, map, geojson, onFeatureClick, showAllBadges);
+      // Use refs here so we pick up any geojson that arrived while Leaflet
+      // was still loading (fixes the async race condition on mobile).
+      if (geojsonRef.current) {
+        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current);
       }
 
       // attach cleanup hooks
@@ -238,10 +250,9 @@ function renderBadgeLayer(
   badgeLayer.clearLayers();
   const badgeSize = getBadgeSize(zoom);
   badgeEntries.forEach(({ lat, lng, badgeSvg }) => {
-    const encoded = encodeURIComponent(badgeSvg);
     const badgeIcon = L.divIcon({
       className: '',
-      html: `<img src="data:image/svg+xml,${encoded}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
+      html: `<img src="${badgeSvg}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
       iconSize: [badgeSize, badgeSize],
       iconAnchor: [badgeSize / 2, badgeSize / 2],
     });
@@ -271,8 +282,6 @@ function renderGeoJSON(
     badgeLayer.clearLayers();
   }
 
-  // Store L on the map so the zoom handler (registered once) can access it
-  (map as any).__L = L;
 
   const lines = geojson.features.filter((f) => f.properties.feature_type === 'line');
   const stations = geojson.features.filter((f) => f.properties.feature_type === 'station');

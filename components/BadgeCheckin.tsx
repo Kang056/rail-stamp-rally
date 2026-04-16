@@ -28,13 +28,15 @@ export default function BadgeCheckin({ onSuccess }: Props) {
       const { latitude, longitude } = pos.coords;
 
       const { data, error: userErr } = await supabase.auth.getUser();
-      if (userErr) {
-        setError('無法取得使用者資訊，請重新登入');
-        return;
-      }
       const user = (data as any)?.user;
+      // In Supabase JS v2 an unauthenticated state returns AuthSessionMissingError;
+      // treat missing user as "please log in" rather than a hard error.
       if (!user) {
         setError('請先登入才能打卡');
+        return;
+      }
+      if (userErr) {
+        setError('無法取得使用者資訊，請重新登入');
         return;
       }
 

@@ -42,7 +42,7 @@ jobs:
 
       - name: Start production server
         run: |
-          nohup npm run start &
+          nohup npx serve out -p 3000 &
           npx wait-on http://localhost:3000 --timeout 15000
 
       - name: Install Playwright browsers

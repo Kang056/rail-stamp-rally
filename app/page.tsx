@@ -56,8 +56,6 @@ export default function HomePage() {
     setSelectedFeature(null);
   }, []);
 
-  const useMockGeo = !process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   const [geojson, setGeojson] = useState<any | null>(null);
   const [loadingGeo, setLoadingGeo] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -70,19 +68,15 @@ export default function HomePage() {
       setGeojson(data);
     } catch (e: any) {
       setGeoError(e?.message ?? String(e));
+      setGeojson(MOCK_GEOJSON as any);
     } finally {
       setLoadingGeo(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!useMockGeo) {
-      fetchGeo();
-    } else {
-      // When using mock data, set it immediately so Map can render instantly
-      setGeojson(MOCK_GEOJSON as any);
-    }
-  }, [useMockGeo, fetchGeo]);
+    fetchGeo();
+  }, [fetchGeo]);
 
   return (
     <main className={styles.main}>
@@ -104,11 +98,9 @@ export default function HomePage() {
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
         {/* Badge checkin overlay (non-blocking) */}
-        {!useMockGeo && (
-          <div className={styles.badgeOverlay}>
-            <BadgeCheckin onSuccess={fetchGeo} />
-          </div>
-        )}
+        <div className={styles.badgeOverlay}>
+          <BadgeCheckin onSuccess={fetchGeo} />
+        </div>
 
         {/* Show a small loading / error indicator when fetching real data */}
         {loadingGeo && (
@@ -122,7 +114,7 @@ export default function HomePage() {
           </div>
         )}
 
-        <Map geojson={useMockGeo ? MOCK_GEOJSON : geojson} onFeatureClick={handleFeatureClick} showAllBadges={showAllBadges} />
+        <Map geojson={geojson} onFeatureClick={handleFeatureClick} showAllBadges={showAllBadges} />
 
         {/* Test button: toggle all station badges */}
         <button
