@@ -12,39 +12,35 @@
 /* ── Icon button ──────────────────────────────────────────────────── */
 .checkinBtn {
   position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0b7285, #1a9eb5);
+  background: transparent;
   color: #fff;
-  border: 3px solid rgba(255, 255, 255, 0.35);
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 18px rgba(11, 114, 133, 0.55);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  padding: 4px;
   outline: none;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checkinBtn:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 6px 24px rgba(11, 114, 133, 0.75);
-  background: linear-gradient(135deg, #0e8fa6, #20b8d4);
+  opacity: 0.75;
 }
 
 .checkinBtn:active:not(:disabled) {
-  transform: scale(0.96);
+  opacity: 0.5;
 }
 
 .checkinBtn:focus-visible {
-  outline: 3px solid #fff;
-  outline-offset: 2px;
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .checkinBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: wait;
 }
 

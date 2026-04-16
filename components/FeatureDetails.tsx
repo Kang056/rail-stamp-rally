@@ -59,7 +59,7 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={badge.badge_image_url.startsWith('data:') || badge.badge_image_url.startsWith('http') ? badge.badge_image_url : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(badge.badge_image_url)}`}
-                alt={`${station.station_name} 徽章`}
+                alt={`${station.station_name} 車站紀念章`}
                 className={styles.badgeImage}
               />
             )}
@@ -182,7 +182,7 @@ export default function FeatureDetails({ feature, onClose, collectedBadges, stat
 
         {stationCountsBySystem && stationCountsBySystem.size > 0 && (
           <div className={styles.progressSection}>
-            <h3 className={styles.progressTitle}>🏅 徽章收集進度</h3>
+            <h3 className={styles.progressTitle}>🏅 車站紀念章收集進度</h3>
             {Object.entries(SYSTEM_LABELS).map(([key, label]) => {
               const total = stationCountsBySystem?.get(key) ?? 0;
               const collected = collectedCountsBySystem?.get(key) ?? 0;

@@ -302,7 +302,7 @@ export default function HomePage() {
               setSheetOpen(false);
               setMobileProgressOpen(true);
             }}
-            aria-label="開啟徽章收集進度"
+            aria-label="開啟車站紀念章收集進度"
             disabled={!isLoggedIn}
           >
             <span className={styles.toolbarTooltip}>收集進度</span>
@@ -343,7 +343,7 @@ export default function HomePage() {
             <Drawer.Overlay className={styles.drawerOverlay} />
             <Drawer.Content className={styles.drawerContent}>
               <Drawer.Title className={styles.visuallyHidden}>
-                徽章收集進度
+                車站紀念章收集進度
               </Drawer.Title>
               <div className={styles.sheetHandle} aria-hidden="true" />
               <div className={styles.drawerInner}>

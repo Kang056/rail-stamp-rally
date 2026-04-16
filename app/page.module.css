@@ -69,43 +69,38 @@
   overflow-y: auto;
 }
 
-/* ── Icon button (shared round 44px button style) ─────────────── */
+/* ── Icon button (shared transparent button style) ─────────────── */
 .iconBtn {
   position: relative;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: #1a1a2e;
+  background: transparent;
   color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  border: none;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  padding: 4px;
   outline: none;
-  padding: 0;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .iconBtn:hover {
-  background: #2e2e4e;
-  border-color: rgba(255, 255, 255, 0.45);
+  opacity: 0.75;
 }
 
 .iconBtn:active {
-  transform: scale(0.96);
+  opacity: 0.5;
 }
 
 .iconBtn:focus-visible {
-  outline: 3px solid #fff;
-  outline-offset: 2px;
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .iconBtnActive {
   color: #20b8d4;
-  border-color: #20b8d4;
 }
 
 /* ── Tooltip for icon buttons ────────────────────────────────────── */
