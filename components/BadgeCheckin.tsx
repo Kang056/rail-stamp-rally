@@ -16,7 +16,10 @@ export default function BadgeCheckin({ user, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [badgeImage, setBadgeImage] = useState<string | null>(null);
 
-  if (!user) return null;
+  /* Requirement 5: when logged out, render nothing */
+  if (!user) {
+    return null;
+  }
 
   const handleCheckin = async () => {
     setLoading(true);

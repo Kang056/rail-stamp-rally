@@ -69,11 +69,26 @@ export default function AuthButton({ onAuthChange }: AuthButtonProps) {
 
   if (loading) return null;
 
+  /* ── Logged-in state: icon button + upward menu with avatar/name/logout ── */
   if (user) {
     return (
       <div className={styles.wrapper} ref={menuRef}>
         {menuOpen && (
           <div className={styles.menu}>
+            {/* Avatar */}
+            {user.user_metadata?.avatar_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.user_metadata.avatar_url}
+                alt={user.user_metadata?.full_name ?? '使用者頭像'}
+                className={styles.menuAvatar}
+              />
+            )}
+            {/* Display name */}
+            <span className={styles.menuName}>
+              {user.user_metadata?.full_name ?? user.email ?? '使用者'}
+            </span>
+            {/* Logout */}
             <button onClick={handleSignOut} className={styles.menuItem}>
               登出
             </button>
@@ -84,27 +99,20 @@ export default function AuthButton({ onAuthChange }: AuthButtonProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-label="使用者選單"
         >
-          {user.user_metadata?.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.user_metadata.avatar_url}
-              alt={user.user_metadata?.full_name ?? '使用者頭像'}
-              className={styles.avatarImg}
-            />
-          ) : (
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          )}
+          <span className={styles.tooltip}>帳號</span>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
         </button>
       </div>
     );
   }
 
+  /* ── Logged-out state: sign-in icon button ── */
   return (
     <button onClick={handleSignIn} className={styles.signInBtn} aria-label="使用google登入">
-      <span className={styles.tooltip}>使用google登入</span>
+      <span className={styles.tooltip}>帳號</span>
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
