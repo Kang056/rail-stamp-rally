@@ -269,6 +269,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 0.5rem 1rem 1rem;
+  /* Mobile: extra bottom padding to clear the fixed toolbar */
   padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
 }
 
@@ -321,6 +322,7 @@
   .bottomBar {
     display: flex;
   }
+  /* Desktop: no toolbar so standard padding suffices */
   .drawerInner {
     padding-bottom: 1rem;
   }

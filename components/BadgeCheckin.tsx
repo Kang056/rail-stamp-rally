@@ -16,18 +16,9 @@ export default function BadgeCheckin({ user, onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [badgeImage, setBadgeImage] = useState<string | null>(null);
 
-  /* Requirement 5: when logged out, render an invisible placeholder to preserve layout */
+  /* Requirement 5: when logged out, render nothing */
   if (!user) {
-    return (
-      <div className={styles.wrapper} aria-hidden="true">
-        <button className={`${styles.checkinBtn} ${styles.hiddenBtn}`} disabled tabIndex={-1} type="button">
-          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5 0 3.53-4.03 8.43-5 9.58C11.03 17.43 7 12.53 7 9c0-2.76 2.24-5 5-5z"/>
-            <polyline points="9.5,9.3 11.2,11 14.5,7.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </button>
-      </div>
-    );
+    return null;
   }
 
   const handleCheckin = async () => {
