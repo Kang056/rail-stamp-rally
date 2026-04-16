@@ -17,12 +17,16 @@ interface FeatureDetailsProps {
   stationCountsBySystem?: Map<string, number>;
   /** Collected station counts per system type */
   collectedCountsBySystem?: Map<string, number>;
+  /** Set of currently visible system types (for toggle) */
+  visibleSystems?: Set<string>;
+  /** Called when user toggles a system's visibility */
+  onToggleSystem?: (system: string) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// System type display labels
+// System type display labels (exported for use in page.tsx)
 // ─────────────────────────────────────────────────────────────────────────────
-const SYSTEM_LABELS: Record<string, string> = {
+export const SYSTEM_LABELS: Record<string, string> = {
   TRA: '台灣鐵路 (TRA)',
   HSR: '高速鐵路 (HSR)',
   TRTC: '台北捷運 (TRTC)',
@@ -145,7 +149,7 @@ function LineDetail({ line }: { line: LineProperties }) {
 // Renders detail content; layout (bottom-sheet vs sidebar) is handled by the
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem }: FeatureDetailsProps) {
+export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem }: FeatureDetailsProps) {
   if (!feature) {
     return (
       <div className={styles.empty}>
@@ -160,9 +164,23 @@ export default function FeatureDetails({ feature, onClose, collectedBadges, stat
               const collected = collectedCountsBySystem?.get(key) ?? 0;
               if (total === 0) return null;
               const pct = Math.round((collected / total) * 100);
+              const isVisible = !visibleSystems || visibleSystems.has(key);
               return (
                 <div key={key} className={styles.progressItem}>
-                  <div className={styles.progressLabel}>{label}</div>
+                  <div className={styles.progressHeader}>
+                    <div className={styles.progressLabel}>{label}</div>
+                    {onToggleSystem && (
+                      <button
+                        className={`${styles.toggleSwitch} ${isVisible ? styles.toggleOn : styles.toggleOff}`}
+                        onClick={() => onToggleSystem(key)}
+                        aria-label={`${isVisible ? '隱藏' : '顯示'} ${label}`}
+                        aria-pressed={isVisible}
+                        type="button"
+                      >
+                        <span className={styles.toggleKnob} />
+                      </button>
+                    )}
+                  </div>
                   <div className={styles.progressBarOuter}>
                     <div
                       className={styles.progressBarInner}

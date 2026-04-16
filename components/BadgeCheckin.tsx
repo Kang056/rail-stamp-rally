@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import styles from './BadgeCheckin.module.css';
 
 type Props = {
   user: User | null;
@@ -67,7 +68,6 @@ export default function BadgeCheckin({ user, onSuccess }: Props) {
         });
       }
     } catch (e: any) {
-      // Geolocation permission denied has code 1 in many browsers
       if (e && e.code === 1) {
         setError('請允許定位權限以完成打卡');
       } else {
@@ -75,44 +75,67 @@ export default function BadgeCheckin({ user, onSuccess }: Props) {
       }
     } finally {
       setLoading(false);
-      setTimeout(() => setMessage(null), 4000);
+      setTimeout(() => {
+        setMessage(null);
+        setBadgeImage(null);
+        setError(null);
+      }, 4000);
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }} aria-live="polite">
+    <div className={styles.wrapper} aria-live="polite">
+      {/* Feedback area (above button) */}
+      {(message || error) && (
+        <div className={styles.feedbackArea}>
+          {message && (
+            <div className={styles.success}>
+              <span>{message}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {badgeImage && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={badgeImage} alt="badge" className={styles.successBadge} />
+              )}
+            </div>
+          )}
+          {error && (
+            <div className={styles.error}>{error}</div>
+          )}
+        </div>
+      )}
+
+      {/* Icon button */}
       <button
         onClick={handleCheckin}
         disabled={loading}
-        aria-label="打卡 / 到訪"
-        style={{
-          background: '#0b7285',
-          color: '#fff',
-          border: 'none',
-          padding: '0.6rem 0.9rem',
-          borderRadius: 8,
-          fontWeight: 700,
-          fontSize: '1rem',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-          cursor: loading ? 'wait' : 'pointer',
-        }}
+        aria-label="打卡"
+        className={styles.checkinBtn}
+        type="button"
       >
-        {loading ? '打卡中…' : '打卡 / 到訪'}
+        {loading ? (
+          <span className={styles.spinner} aria-hidden="true" />
+        ) : (
+          /* Location pin + stamp checkmark icon */
+          <svg
+            viewBox="0 0 24 24"
+            width="26"
+            height="26"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 2c2.76 0 5 2.24 5 5 0 3.53-4.03 8.43-5 9.58C11.03 17.43 7 12.53 7 9c0-2.76 2.24-5 5-5z"/>
+            <polyline
+              points="9.5,9.3 11.2,11 14.5,7.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
+        <span className={styles.tooltip}>打卡</span>
       </button>
-
-      {message && (
-        <div style={{ marginTop: 8, background: 'rgba(0,0,0,0.8)', color: '#fff', padding: '6px 10px', borderRadius: 6, display: 'flex', alignItems: 'center', gap:8 }}>
-          <span>{message}</span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {badgeImage && <img src={badgeImage} alt="badge" style={{ width: 40, height:40, borderRadius:4, objectFit:'cover' }} />}
-        </div>
-      )}
-
-      {error && (
-        <div style={{ marginTop: 8, background: '#ffe6e6', color:'#800', padding: '6px 10px', borderRadius: 6 }}>
-          {error}
-        </div>
-      )}
     </div>
   );
 }

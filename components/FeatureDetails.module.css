@@ -156,9 +156,60 @@
   margin-bottom: 0.75rem;
 }
 
+.progressHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+  gap: 0.5rem;
+}
+
 .progressLabel {
   font-size: 0.8rem;
-  margin-bottom: 0.25rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Toggle switch ─────────────────────────────────────────────── */
+.toggleSwitch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.toggleOn {
+  background: #4caf50;
+}
+
+.toggleOff {
+  background: rgba(128, 128, 128, 0.4);
+}
+
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: left 0.2s ease;
+}
+
+.toggleOn .toggleKnob {
+  left: 18px;
+}
+
+.toggleOff .toggleKnob {
+  left: 2px;
 }
 
 .progressBarOuter {

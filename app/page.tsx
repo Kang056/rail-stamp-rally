@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { RailwayFeatureProperties, CollectedBadge } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
-import FeatureDetails from '@/components/FeatureDetails';
+import FeatureDetails, { SYSTEM_LABELS } from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
 import { getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
@@ -46,6 +46,21 @@ export default function HomePage() {
   const [newBadgeStationId, setNewBadgeStationId] = useState<string | null>(null);
   const [mobileProgressOpen, setMobileProgressOpen] = useState(false);
   const [mockLogin, setMockLogin] = useState(false);
+  const [visibleSystems, setVisibleSystems] = useState<Set<string>>(
+    () => new Set(Object.keys(SYSTEM_LABELS))
+  );
+
+  const handleToggleSystem = useCallback((system: string) => {
+    setVisibleSystems((prev) => {
+      const next = new Set(prev);
+      if (next.has(system)) {
+        next.delete(system);
+      } else {
+        next.add(system);
+      }
+      return next;
+    });
+  }, []);
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
@@ -193,7 +208,6 @@ export default function HomePage() {
 
         setCollectedStationIds(ids);
         setCollectedBadgesMap(badgesMap);
-        setShowAllBadges(true);
       } else {
         setCollectedStationIds(new Set());
         setCollectedBadgesMap(new Map());
@@ -219,16 +233,24 @@ export default function HomePage() {
             collectedBadges={collectedBadgesMap}
             stationCountsBySystem={stationCountsBySystem}
             collectedCountsBySystem={collectedCountsBySystem}
+            visibleSystems={visibleSystems}
+            onToggleSystem={handleToggleSystem}
           />
         </div>
       </aside>
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
-        {/* Badge checkin overlay (non-blocking) */}
-        <div className={styles.badgeOverlay}>
+        {/* ── Top-right: 登入/登出 + 模擬登入 ── */}
+        <div className={styles.topRightOverlay}>
           <AuthButton onAuthChange={handleAuthChange} />
-          <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
+          <button
+            className={styles.mockLoginBtn}
+            onClick={handleMockLoginToggle}
+            aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
+          >
+            {mockLogin ? '🔓 模擬登入中' : '🔐 模擬登入'}
+          </button>
         </div>
 
         {/* Show a small loading / error indicator when fetching real data */}
@@ -249,40 +271,65 @@ export default function HomePage() {
           showAllBadges={showAllBadges}
           collectedStationIds={collectedStationIds}
           newBadgeStationId={newBadgeStationId}
+          visibleSystems={visibleSystems}
         />
 
-        {/* Mock login toggle: generates random badge data */}
-        <button
-          className={styles.showBadgesBtn}
-          onClick={handleMockLoginToggle}
-          aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
-        >
-          {mockLogin ? '🔓 模擬登入中' : '🔐 模擬登入'}
-        </button>
-
-        {/* ── Mobile collection progress panel ── */}
-        <div className={`${styles.mobileOnly} ${styles.mobileProgressWrapper}`}>
+        {/* ── Bottom bar: 打卡 (center) + 手機收集進度 (left) ── */}
+        <div className={styles.bottomBar}>
+          {/* Mobile-only: 收集進度 trigger */}
           <button
-            className={styles.mobileProgressToggle}
-            onClick={() => setMobileProgressOpen((v) => !v)}
+            className={`${styles.mapActionBtn} ${styles.mobileOnly}`}
+            onClick={() => {
+              setSheetOpen(false);
+              setMobileProgressOpen(true);
+            }}
+            aria-label="開啟徽章收集進度"
           >
-            {mobileProgressOpen ? '🏅 收起進度' : '🏅 收集進度'}
+            🏅
+            <span className={styles.btnLabel}>收集進度</span>
           </button>
-          {mobileProgressOpen && stationCountsBySystem && stationCountsBySystem.size > 0 && (
-            <div className={styles.mobileProgressPanel}>
-              <FeatureDetails
-                feature={null}
-                onClose={() => setMobileProgressOpen(false)}
-                collectedBadges={collectedBadgesMap}
-                stationCountsBySystem={stationCountsBySystem}
-                collectedCountsBySystem={collectedCountsBySystem}
-              />
-            </div>
-          )}
+
+          {/* 打卡 icon button (center) */}
+          <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
+
+          {/* Spacer for symmetry on mobile */}
+          <div className={`${styles.mapActionSpacer} ${styles.mobileOnly}`} aria-hidden="true" />
         </div>
       </section>
 
-      {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}
+      {/* ── Mobile: 收集進度 Drawer ── */}
+      <div className={styles.mobileOnly}>
+        <Drawer.Root
+          open={mobileProgressOpen}
+          onOpenChange={(open) => {
+            setMobileProgressOpen(open);
+          }}
+          modal={false}
+        >
+          <Drawer.Portal>
+            <Drawer.Overlay className={styles.drawerOverlay} />
+            <Drawer.Content className={styles.drawerContent}>
+              <Drawer.Title className={styles.visuallyHidden}>
+                徽章收集進度
+              </Drawer.Title>
+              <div className={styles.sheetHandle} aria-hidden="true" />
+              <div className={styles.drawerInner}>
+                <FeatureDetails
+                  feature={null}
+                  onClose={() => setMobileProgressOpen(false)}
+                  collectedBadges={collectedBadgesMap}
+                  stationCountsBySystem={stationCountsBySystem}
+                  collectedCountsBySystem={collectedCountsBySystem}
+                  visibleSystems={visibleSystems}
+                  onToggleSystem={handleToggleSystem}
+                />
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </div>
+
+      {/* ── Mobile: 車站/路線詳情 Drawer ── */}
       <div className={styles.mobileOnly}>
         <Drawer.Root
           open={sheetOpen}

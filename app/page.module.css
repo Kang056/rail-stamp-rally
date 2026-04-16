@@ -99,7 +99,7 @@
 }
 
 /* Badge & auth overlay */
-.badgeOverlay {
+.topRightOverlay {
   position: absolute;
   right: 1rem;
   top: 1rem;
@@ -110,27 +110,79 @@
   gap: 0.5rem;
 }
 
-/* Test button: show all badges */
-.showBadgesBtn {
-  position: absolute;
-  left: 1rem;
-  bottom: 2rem;
-  z-index: 1000;
+/* Mock login button */
+.mockLoginBtn {
   background: #1a1a2e;
   color: #fff;
-  border: 2px solid #444;
-  padding: 0.5rem 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  padding: 0.45rem 0.85rem;
   border-radius: 8px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
 }
 
-.showBadgesBtn:hover {
+.mockLoginBtn:hover {
   background: #2e2e4e;
-  border-color: #888;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* ── Bottom action bar (打卡 + 收集進度) ──────────────────────────── */
+.bottomBar {
+  position: absolute;
+  bottom: 2rem;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 1rem;
+  pointer-events: none;
+}
+
+.bottomBar > * {
+  pointer-events: auto;
+}
+
+/* Map action button (收集進度 etc.) */
+.mapActionBtn {
+  background: #1a1a2e;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s, border-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 56px;
+}
+
+.mapActionBtn:hover {
+  background: #2e2e4e;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.btnLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+/* Spacer (same width as mapActionBtn for centering the check-in button) */
+.mapActionSpacer {
+  min-width: 56px;
+  height: 1px;
+  pointer-events: none;
 }
 
 /* ── Vaul Drawer (mobile bottom sheet replacement) ──────────────── */
@@ -175,47 +227,13 @@
   border-width: 0;
 }
 
-/* ── Mobile collection progress ─────────────────────────────────── */
-.mobileProgressWrapper {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-}
-
-.mobileProgressToggle {
-  pointer-events: auto;
-  margin-bottom: 0.5rem;
-  background: #1a1a2e;
-  color: #fff;
-  border: 2px solid #444;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.85rem;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.mobileProgressPanel {
-  pointer-events: auto;
-  width: 100%;
-  max-height: 50vh;
-  overflow-y: auto;
-  background: #1a1a2e;
-  color: #f0f0f0;
-  border-radius: 16px 16px 0 0;
-  padding: 0.5rem;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
-}
-
 @media (min-width: 768px) {
-  .mobileProgressWrapper {
+  .mobileOnly {
     display: none;
+  }
+  .bottomBar {
+    /* On desktop, place bottom bar within the map section, not overlapping sidebar */
+    left: 0;
+    right: 0;
   }
 }
