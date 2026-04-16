@@ -3,7 +3,7 @@ const nextConfig = {
   // Static HTML export for GitHub Pages hosting
   output: 'export',
   // Repo is served at https://<user>.github.io/rail-stamp-rally/
-  basePath: '/rail-stamp-rally',
+  basePath: process.env.NODE_ENV === 'production' ? '/rail-stamp-rally' : '',
   // next/image optimization requires a server; disable for static export
   images: { unoptimized: true },
   // Mark the project root explicitly to avoid Next inferring the wrong workspace root
