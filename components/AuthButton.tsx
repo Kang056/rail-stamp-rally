@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { Drawer } from 'vaul';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import styles from './AuthButton.module.css';
@@ -14,10 +15,9 @@ interface AuthButtonProps {
 export default function AuthButton({ onAuthChange }: AuthButtonProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const onAuthChangeRef = useRef(onAuthChange);
   onAuthChangeRef.current = onAuthChange;
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Read initial session
@@ -36,18 +36,6 @@ export default function AuthButton({ onAuthChange }: AuthButtonProps) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Click-outside to close menu
-  useEffect(() => {
-    if (!menuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [menuOpen]);
-
   const handleSignIn = async () => {
     // Build redirect URL that works for both local dev and GitHub Pages
     const origin = window.location.origin;
@@ -62,41 +50,20 @@ export default function AuthButton({ onAuthChange }: AuthButtonProps) {
   };
 
   const handleSignOut = async () => {
-    setMenuOpen(false);
+    setDrawerOpen(false);
     await supabase.auth.signOut();
     setUser(null);
   };
 
   if (loading) return null;
 
-  /* ── Logged-in state: icon button + upward menu with avatar/name/logout ── */
+  /* ── Logged-in state: icon button + account drawer ── */
   if (user) {
     return (
-      <div className={styles.wrapper} ref={menuRef}>
-        {menuOpen && (
-          <div className={styles.menu}>
-            {/* Avatar */}
-            {user.user_metadata?.avatar_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.user_metadata.avatar_url}
-                alt={user.user_metadata?.full_name ?? '使用者頭像'}
-                className={styles.menuAvatar}
-              />
-            )}
-            {/* Display name */}
-            <span className={styles.menuName}>
-              {user.user_metadata?.full_name ?? user.email ?? '使用者'}
-            </span>
-            {/* Logout */}
-            <button onClick={handleSignOut} className={styles.menuItem}>
-              登出
-            </button>
-          </div>
-        )}
+      <>
         <button
           className={styles.avatarBtn}
-          onClick={() => setMenuOpen((prev) => !prev)}
+          onClick={() => setDrawerOpen(true)}
           aria-label="使用者選單"
         >
           <span className={styles.tooltip}>帳號</span>
@@ -105,7 +72,35 @@ export default function AuthButton({ onAuthChange }: AuthButtonProps) {
             <circle cx="12" cy="7" r="4" />
           </svg>
         </button>
-      </div>
+
+        <Drawer.Root open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <Drawer.Portal>
+            <Drawer.Overlay className={styles.drawerOverlay} />
+            <Drawer.Content className={styles.drawerContent}>
+              <Drawer.Title className={styles.visuallyHidden}>帳號</Drawer.Title>
+              <div className={styles.sheetHandle} aria-hidden="true" />
+              <div className={styles.drawerInner}>
+                <div className={styles.accountContent}>
+                  {user.user_metadata?.avatar_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt={user.user_metadata?.full_name ?? '使用者頭像'}
+                      className={styles.accountAvatar}
+                    />
+                  )}
+                  <span className={styles.accountName}>
+                    {user.user_metadata?.full_name ?? user.email ?? '使用者'}
+                  </span>
+                  <button onClick={handleSignOut} className={styles.logoutBtn}>
+                    登出
+                  </button>
+                </div>
+              </div>
+            </Drawer.Content>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </>
     );
   }
 

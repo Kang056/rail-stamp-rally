@@ -39,7 +39,7 @@ export default function BadgeCheckin({ user, onSuccess }: Props) {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('checkin', {
         user_lon: longitude,
         user_lat: latitude,
-        user_id: user.id,
+        p_user_id: user.id,
       });
 
       if (rpcErr) {
@@ -121,8 +121,8 @@ export default function BadgeCheckin({ user, onSuccess }: Props) {
           /* Location pin + stamp checkmark icon */
           <svg
             viewBox="0 0 24 24"
-            width="26"
-            height="26"
+            width="22"
+            height="22"
             fill="currentColor"
             aria-hidden="true"
           >
