@@ -1,60 +1,163 @@
 /* AuthButton.module.css */
 
+/* ── Wrapper (logged-in state) ───────────────────────────────────── */
 .wrapper {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  object-fit: cover;
-}
-
-.signOutBtn {
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.signOutBtn:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
-
+/* ── Sign-in icon button (before login) ──────────────────────────── */
 .signInBtn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1a1a2e;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  background: #ffffff;
-  color: #333333;
-  border: none;
-  padding: 0.5rem 0.9rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  transition: box-shadow 0.2s, transform 0.1s;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  outline: none;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .signInBtn:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transform: translateY(-1px);
+  background: #2e2e4e;
+  border-color: rgba(255, 255, 255, 0.45);
 }
 
 .signInBtn:active {
-  transform: translateY(0);
+  transform: scale(0.96);
 }
 
-.googleIcon {
+.signInBtn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+/* ── Tooltip (sign-in button hover) ──────────────────────────────── */
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  letter-spacing: 0.05em;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.82);
+}
+
+.signInBtn:hover .tooltip,
+.signInBtn:focus-visible .tooltip {
+  opacity: 1;
+}
+
+/* ── Avatar button (after login) ─────────────────────────────────── */
+.avatarBtn {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #1a1a2e;
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  outline: none;
+  padding: 0;
+  overflow: hidden;
   flex-shrink: 0;
+}
+
+.avatarBtn:hover {
+  background: #2e2e4e;
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.avatarBtn:active {
+  transform: scale(0.96);
+}
+
+.avatarBtn:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* ── Upward-expanding menu ───────────────────────────────────────── */
+.menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.4);
+  padding: 4px 0;
+  min-width: 80px;
+  z-index: 100;
+}
+
+.menu::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1a1a2e;
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  transition: background 0.12s ease;
+}
+
+.menuItem:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
