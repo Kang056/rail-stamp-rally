@@ -21,6 +21,10 @@ interface FeatureDetailsProps {
   visibleSystems?: Set<string>;
   /** Called when user toggles a system's visibility */
   onToggleSystem?: (system: string) => void;
+  /** Whether stations are currently visible on the map */
+  showStations?: boolean;
+  /** Toggle handler for global station visibility */
+  onToggleStations?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -149,12 +153,32 @@ function LineDetail({ line }: { line: LineProperties }) {
 // Renders detail content; layout (bottom-sheet vs sidebar) is handled by the
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem }: FeatureDetailsProps) {
+export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem, showStations, onToggleStations }: FeatureDetailsProps) {
   if (!feature) {
     return (
       <div className={styles.empty}>
-        <p>點擊地圖上的車站或路線以查看詳情。</p>
-        <p className={styles.emptyHint}>(Click a station or line on the map)</p>
+        <button
+          className={styles.closeButton}
+          onClick={onClose}
+          aria-label="Close details panel"
+        >
+          ✕
+        </button>
+
+        <div className={styles.stationToggleRow}>
+          <div className={styles.stationToggleLabel}>車站顯示</div>
+          {onToggleStations && (
+            <button
+              className={`${styles.toggleSwitch} ${showStations ? styles.toggleOn : styles.toggleOff}`}
+              onClick={onToggleStations}
+              aria-label={showStations ? '隱藏車站' : '顯示車站'}
+              aria-pressed={!!showStations}
+              type="button"
+            >
+              <span className={styles.toggleKnob} />
+            </button>
+          )}
+        </div>
 
         {stationCountsBySystem && stationCountsBySystem.size > 0 && (
           <div className={styles.progressSection}>

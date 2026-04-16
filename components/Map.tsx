@@ -31,6 +31,8 @@ interface MapProps {
   newBadgeStationId?: string | null;
   /** Set of system_type keys that should be rendered (undefined = show all) */
   visibleSystems?: Set<string>;
+  /** Whether station points should be rendered */
+  showStations?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -110,7 +112,7 @@ function addFilmstripPolyline(
 // ─────────────────────────────────────────────────────────────────────────────
 // MapComponent
 // ─────────────────────────────────────────────────────────────────────────────
-export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId, visibleSystems }: MapProps) {
+export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId, visibleSystems, showStations = true }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
@@ -123,12 +125,14 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   const collectedStationIdsRef = useRef(collectedStationIds);
   const newBadgeStationIdRef = useRef(newBadgeStationId);
   const visibleSystemsRef = useRef(visibleSystems);
+  const showStationsRef = useRef(showStations);
   geojsonRef.current = geojson;
   onFeatureClickRef.current = onFeatureClick;
   showAllBadgesRef.current = showAllBadges;
   collectedStationIdsRef.current = collectedStationIds;
   newBadgeStationIdRef.current = newBadgeStationId;
   visibleSystemsRef.current = visibleSystems;
+  showStationsRef.current = showStations;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
@@ -248,7 +252,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
       // ── Render GeoJSON features ──────────────────────────────────────────
       if (geojsonRef.current) {
-        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current, collectedStationIdsRef.current, newBadgeStationIdRef.current, visibleSystemsRef.current);
+        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current, collectedStationIdsRef.current, newBadgeStationIdRef.current, visibleSystemsRef.current, showStationsRef.current);
       }
 
       // Attach cleanup hooks
@@ -284,11 +288,11 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
     import('leaflet').then((L) => {
       if (mapRef.current) {
-        renderGeoJSON(L, mapRef.current, geojson, onFeatureClick, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems);
+        renderGeoJSON(L, mapRef.current, geojson, onFeatureClick, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems, showStations);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geojson, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems]);
+  }, [geojson, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems, showStations]);
 
   return (
     <div
@@ -315,6 +319,7 @@ function renderGeoJSON(
   collectedStationIds?: Set<string>,
   newBadgeStationId?: string | null,
   visibleSystems?: Set<string>,
+  showStations: boolean = true,
 ) {
   // Ensure a dedicated feature layer exists
   let featureLayer: any = (map as any).__featureLayer;
@@ -377,6 +382,8 @@ function renderGeoJSON(
 
     // Skip if this system is hidden
     if (visibleSystems && props.feature_type === 'station' && !visibleSystems.has((props as any).system_type)) return;
+    // Skip if station rendering is globally disabled
+    if (!showStations) return;
 
     const stationId = props.feature_type === 'station' ? (props as any).station_id as string | undefined : undefined;
     const isCollected = !!(stationId && collectedStationIds?.has(stationId));
@@ -397,6 +404,14 @@ function renderGeoJSON(
         .on('click', () => onFeatureClick(props))
         .addTo(featureLayer);
 
+      // Tooltip for station name
+      try {
+        const name = (props as any).station_name ?? '';
+        circle.bindTooltip(name, { direction: 'top', offset: [0, -radius], sticky: true });
+      } catch (e) {
+        // ignore tooltip errors
+      }
+
       (map as any).__stationCircles.push(circle);
     }
 
@@ -413,6 +428,14 @@ function renderGeoJSON(
       });
       const badgeMarker = L.marker([lat, lng], { icon: badgeIcon, interactive: isCollected })
         .addTo(featureLayer);
+
+      // Tooltip for badge/marker
+      try {
+        const name = (props as any).station_name ?? '';
+        badgeMarker.bindTooltip(name, { direction: 'top', offset: [0, -Math.round(badgeSize / 2)], sticky: true });
+      } catch (e) {
+        // ignore
+      }
 
       if (isCollected) {
         badgeMarker.on('click', () => onFeatureClick(props));
@@ -431,6 +454,13 @@ function renderGeoJSON(
       })
         .on('click', () => onFeatureClick(props))
         .addTo(featureLayer);
+
+      try {
+        const name = (props as any).station_name ?? '';
+        circle.bindTooltip(name, { direction: 'top', offset: [0, -radius], sticky: true });
+      } catch (e) {
+        // ignore
+      }
 
       (map as any).__stationCircles.push(circle);
     }

@@ -61,6 +61,8 @@ export default function HomePage() {
       return next;
     });
   }, []);
+  const [showStations, setShowStations] = useState<boolean>(true);
+  const handleToggleStations = useCallback(() => setShowStations((v) => !v), []);
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
@@ -235,6 +237,8 @@ export default function HomePage() {
             collectedCountsBySystem={collectedCountsBySystem}
             visibleSystems={visibleSystems}
             onToggleSystem={handleToggleSystem}
+            showStations={showStations}
+            onToggleStations={handleToggleStations}
           />
         </div>
       </aside>
@@ -272,6 +276,7 @@ export default function HomePage() {
           collectedStationIds={collectedStationIds}
           newBadgeStationId={newBadgeStationId}
           visibleSystems={visibleSystems}
+          showStations={showStations}
         />
 
         {/* ── Bottom bar: 打卡 (center) + 手機收集進度 (left) ── */}
@@ -322,6 +327,8 @@ export default function HomePage() {
                   collectedCountsBySystem={collectedCountsBySystem}
                   visibleSystems={visibleSystems}
                   onToggleSystem={handleToggleSystem}
+                  showStations={showStations}
+                  onToggleStations={handleToggleStations}
                 />
               </div>
             </Drawer.Content>

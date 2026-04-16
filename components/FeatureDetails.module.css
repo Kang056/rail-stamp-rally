@@ -170,6 +170,20 @@
   min-width: 0;
 }
 
+/* ── Station toggle row (empty progress view) ───────────────────────── */
+.stationToggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.stationToggleLabel {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
 /* ── Toggle switch ─────────────────────────────────────────────── */
 .toggleSwitch {
   position: relative;
