@@ -271,11 +271,10 @@ function renderGeoJSON(
 
     // Show badge overlay when showAllBadges is enabled
     if (showAllBadges && props.feature_type === 'station' && (props as any).badge_image_url) {
-      const badgeSvg = (props as any).badge_image_url as string;
-      const encoded = encodeURIComponent(badgeSvg);
+      const badgeUrl = (props as any).badge_image_url as string;
       const badgeIcon = L.divIcon({
         className: '',
-        html: `<img src="data:image/svg+xml,${encoded}" style="width:36px;height:36px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
+        html: `<img src="${badgeUrl}" style="width:36px;height:36px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
         iconSize: [36, 36],
         iconAnchor: [18, 18],
       });
