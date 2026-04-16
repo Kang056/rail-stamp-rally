@@ -155,3 +155,29 @@ export async function getUserCollectedBadges(userId: string): Promise<CollectedB
 
   return (data as CollectedBadge[]) ?? [];
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// upsertProfile
+// Upserts user profile info to the profiles table after login.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function upsertProfile(user: {
+  id: string;
+  email?: string;
+  user_metadata?: { full_name?: string; avatar_url?: string };
+}) {
+  const { error } = await supabase
+    .from('profiles')
+    .upsert(
+      {
+        id: user.id,
+        email: user.email ?? null,
+        display_name: user.user_metadata?.full_name ?? null,
+        avatar_url: user.user_metadata?.avatar_url ?? null,
+      },
+      { onConflict: 'id' },
+    );
+
+  if (error) {
+    console.error('Failed to upsert profile:', error.message);
+  }
+}

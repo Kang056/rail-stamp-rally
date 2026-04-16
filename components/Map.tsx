@@ -37,13 +37,17 @@ interface MapProps {
 
 /** Maps zoom level to station CircleMarker radius (px). Default zoom 8 → 12px. */
 function getRadiusForZoom(zoom: number): number {
-  if (zoom <= 7) return 10;
+  if (zoom <= 7) return 8;
   if (zoom <= 8) return 12;
-  if (zoom <= 10) return 14;
-  if (zoom <= 11) return 16;
-  if (zoom <= 12) return 18;
-  if (zoom <= 13) return 20;
-  return 24;
+  if (zoom <= 9) return 16;
+  if (zoom <= 10) return 20;
+  if (zoom <= 11) return 24;
+  if (zoom <= 12) return 28;
+  if (zoom <= 13) return 32;
+  if (zoom <= 14) return 36;
+  if (zoom <= 15) return 40;
+  if (zoom <= 16) return 44;
+  return 48;
 }
 
 /** Badge icon size scales proportionally to station radius. */

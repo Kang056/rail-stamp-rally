@@ -13,6 +13,10 @@ interface FeatureDetailsProps {
   onClose: () => void;
   /** Collected badges keyed by station_id */
   collectedBadges?: Map<string, { unlocked_at: string; badge_image_url: string | null }>;
+  /** Total station counts per system type */
+  stationCountsBySystem?: Map<string, number>;
+  /** Collected station counts per system type */
+  collectedCountsBySystem?: Map<string, number>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,7 +56,10 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
               />
             )}
             <span className={styles.badgeDate}>
-              ✅ 已到訪 · {new Date(badge.unlocked_at).toLocaleDateString('zh-TW')}
+              ✅ 已到訪 · {new Date(badge.unlocked_at).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
+            </span>
+            <span className={styles.badgeTime}>
+              🕐 {new Date(badge.unlocked_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         ) : (
@@ -130,12 +137,38 @@ function LineDetail({ line }: { line: LineProperties }) {
 // Renders detail content; layout (bottom-sheet vs sidebar) is handled by the
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FeatureDetails({ feature, onClose, collectedBadges }: FeatureDetailsProps) {
+export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem }: FeatureDetailsProps) {
   if (!feature) {
     return (
       <div className={styles.empty}>
         <p>點擊地圖上的車站或路線以查看詳情。</p>
         <p className={styles.emptyHint}>(Click a station or line on the map)</p>
+
+        {stationCountsBySystem && stationCountsBySystem.size > 0 && (
+          <div className={styles.progressSection}>
+            <h3 className={styles.progressTitle}>🏅 徽章收集進度</h3>
+            {Object.entries(SYSTEM_LABELS).map(([key, label]) => {
+              const total = stationCountsBySystem?.get(key) ?? 0;
+              const collected = collectedCountsBySystem?.get(key) ?? 0;
+              if (total === 0) return null;
+              const pct = Math.round((collected / total) * 100);
+              return (
+                <div key={key} className={styles.progressItem}>
+                  <div className={styles.progressLabel}>{label}</div>
+                  <div className={styles.progressBarOuter}>
+                    <div
+                      className={styles.progressBarInner}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className={styles.progressCount}>
+                    {collected}/{total}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   }

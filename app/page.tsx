@@ -9,12 +9,12 @@
  */
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { RailwayFeatureProperties, CollectedBadge } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import FeatureDetails from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
-import { getAllRailwayGeoJSON, getUserCollectedBadges } from '@/lib/supabaseClient';
+import { getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
 import AuthButton from '@/components/AuthButton';
 import styles from './page.module.css';
@@ -107,6 +107,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) return;
+    // Record/update user profile info in DB
+    upsertProfile(user);
     getUserCollectedBadges(user.id).then((badges) => {
       const ids = new Set(badges.map((b) => b.station_id));
       const map = new Map(badges.map((b) => [b.station_id, { unlocked_at: b.unlocked_at, badge_image_url: b.badge_image_url }]));
@@ -116,6 +118,34 @@ export default function HomePage() {
       console.error('Failed to fetch user badges:', err);
     });
   }, [user]);
+
+  // Compute station counts per system for progress bars
+  const stationCountsBySystem = useMemo(() => {
+    if (!geojson) return new Map<string, number>();
+    const counts = new Map<string, number>();
+    geojson.features.forEach((f: any) => {
+      if (f.properties.feature_type === 'station') {
+        const sys = f.properties.system_type;
+        counts.set(sys, (counts.get(sys) ?? 0) + 1);
+      }
+    });
+    return counts;
+  }, [geojson]);
+
+  const collectedCountsBySystem = useMemo(() => {
+    if (!geojson || collectedBadgesMap.size === 0) return new Map<string, number>();
+    const counts = new Map<string, number>();
+    geojson.features.forEach((f: any) => {
+      if (f.properties.feature_type === 'station') {
+        const stationId = f.properties.station_id;
+        if (collectedBadgesMap.has(stationId)) {
+          const sys = f.properties.system_type;
+          counts.set(sys, (counts.get(sys) ?? 0) + 1);
+        }
+      }
+    });
+    return counts;
+  }, [geojson, collectedBadgesMap]);
 
   return (
     <main className={styles.main}>
@@ -131,6 +161,8 @@ export default function HomePage() {
             feature={selectedFeature}
             onClose={handleClose}
             collectedBadges={collectedBadgesMap}
+            stationCountsBySystem={stationCountsBySystem}
+            collectedCountsBySystem={collectedCountsBySystem}
           />
         </div>
       </aside>
@@ -192,6 +224,8 @@ export default function HomePage() {
                   feature={selectedFeature}
                   onClose={handleClose}
                   collectedBadges={collectedBadgesMap}
+                  stationCountsBySystem={stationCountsBySystem}
+                  collectedCountsBySystem={collectedCountsBySystem}
                 />
               </div>
             </Drawer.Content>
