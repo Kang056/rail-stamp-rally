@@ -129,3 +129,29 @@ export async function searchStationsByName(query: string) {
 
   return data ?? [];
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CollectedBadge type — shape returned by get_user_badges RPC
+// ─────────────────────────────────────────────────────────────────────────────
+export interface CollectedBadge {
+  station_id: string;
+  unlocked_at: string;
+  station_name: string;
+  badge_image_url: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getUserCollectedBadges
+// Calls the `get_user_badges` Postgres RPC to fetch all badges for a user.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function getUserCollectedBadges(userId: string): Promise<CollectedBadge[]> {
+  const { data, error } = await supabase.rpc('get_user_badges', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    throw new Error(`Failed to fetch user badges: ${error.message}`);
+  }
+
+  return (data as CollectedBadge[]) ?? [];
+}

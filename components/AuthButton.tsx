@@ -1,24 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import styles from './AuthButton.module.css';
 
-export default function AuthButton() {
+export type { User };
+
+interface AuthButtonProps {
+  onAuthChange?: (user: User | null) => void;
+}
+
+export default function AuthButton({ onAuthChange }: AuthButtonProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const onAuthChangeRef = useRef(onAuthChange);
+  onAuthChangeRef.current = onAuthChange;
 
   useEffect(() => {
     // Read initial session
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ?? null);
+      onAuthChangeRef.current?.(data.user ?? null);
       setLoading(false);
     });
 
     // Subscribe to auth state changes (handles OAuth redirect callback automatically)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      onAuthChangeRef.current?.(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();

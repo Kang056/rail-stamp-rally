@@ -2,20 +2,25 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 
 type Props = {
-  onSuccess?: () => void;
+  user: User | null;
+  onSuccess?: (result: { station_id: string; station_name: string; badge_image_url: string | null }) => void;
 };
 
-export default function BadgeCheckin({ onSuccess }: Props) {
+export default function BadgeCheckin({ user, onSuccess }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [badgeImage, setBadgeImage] = useState<string | null>(null);
 
+  if (!user) return null;
+
   const handleCheckin = async () => {
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
       if (!navigator.geolocation) {
         setError('您的瀏覽器不支援地理定位');
@@ -26,19 +31,6 @@ export default function BadgeCheckin({ onSuccess }: Props) {
         navigator.geolocation.getCurrentPosition(resolve, reject),
       );
       const { latitude, longitude } = pos.coords;
-
-      const { data, error: userErr } = await supabase.auth.getUser();
-      const user = (data as any)?.user;
-      // In Supabase JS v2 an unauthenticated state returns AuthSessionMissingError;
-      // treat missing user as "please log in" rather than a hard error.
-      if (!user) {
-        setError('請先登入才能打卡');
-        return;
-      }
-      if (userErr) {
-        setError('無法取得使用者資訊，請重新登入');
-        return;
-      }
 
       const { data: rpcData, error: rpcErr } = await supabase.rpc('checkin', {
         user_lon: longitude,
@@ -52,9 +44,28 @@ export default function BadgeCheckin({ onSuccess }: Props) {
       }
 
       const result = rpcData as any;
-      setBadgeImage(result?.badge_image_url ?? null);
-      setMessage('打卡成功！');
-      if (typeof onSuccess === 'function') onSuccess();
+
+      if (!result.ok) {
+        setError('打卡失敗！未在車站範圍內');
+        return;
+      }
+
+      if (result.already_unlocked) {
+        const d = new Date(result.unlocked_at);
+        setError(`${result.station_name}車站已在${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日打卡完成`);
+        return;
+      }
+
+      // New badge!
+      setBadgeImage(result.badge_image_url ?? null);
+      setMessage(`打卡成功，歡迎到訪${result.station_name}車站`);
+      if (typeof onSuccess === 'function') {
+        onSuccess({
+          station_id: result.station_id,
+          station_name: result.station_name,
+          badge_image_url: result.badge_image_url,
+        });
+      }
     } catch (e: any) {
       // Geolocation permission denied has code 1 in many browsers
       if (e && e.code === 1) {

@@ -25,6 +25,10 @@ interface MapProps {
   onFeatureClick: (properties: RailwayFeatureProperties) => void;
   /** When true, display badge icons on all stations that have badge_image_url */
   showAllBadges?: boolean;
+  /** Set of station_id values that the user has collected — always show badge for these */
+  collectedStationIds?: Set<string>;
+  /** When set, the badge for this station_id plays a bounce+glow entrance animation */
+  newBadgeStationId?: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,11 +37,12 @@ interface MapProps {
 
 /** Maps zoom level to station CircleMarker radius (px). Default zoom 8 → 12px. */
 function getRadiusForZoom(zoom: number): number {
-  if (zoom <= 7) return 8;
+  if (zoom <= 7) return 10;
   if (zoom <= 8) return 12;
   if (zoom <= 10) return 14;
-  if (zoom <= 12) return 16;
-  if (zoom <= 14) return 20;
+  if (zoom <= 11) return 16;
+  if (zoom <= 12) return 18;
+  if (zoom <= 13) return 20;
   return 24;
 }
 
@@ -99,7 +104,7 @@ function addFilmstripPolyline(
 // ─────────────────────────────────────────────────────────────────────────────
 // MapComponent
 // ─────────────────────────────────────────────────────────────────────────────
-export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false }: MapProps) {
+export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
@@ -109,9 +114,13 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   const geojsonRef = useRef(geojson);
   const onFeatureClickRef = useRef(onFeatureClick);
   const showAllBadgesRef = useRef(showAllBadges);
+  const collectedStationIdsRef = useRef(collectedStationIds);
+  const newBadgeStationIdRef = useRef(newBadgeStationId);
   geojsonRef.current = geojson;
   onFeatureClickRef.current = onFeatureClick;
   showAllBadgesRef.current = showAllBadges;
+  collectedStationIdsRef.current = collectedStationIds;
+  newBadgeStationIdRef.current = newBadgeStationId;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
@@ -128,6 +137,29 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
       link.crossOrigin = '';
       link.setAttribute('data-leaflet-css', 'true');
       document.head.appendChild(link);
+    }
+
+    // Inject badge animation CSS
+    if (typeof document !== 'undefined' && !document.querySelector('style[data-badge-anim]')) {
+      const style = document.createElement('style');
+      style.setAttribute('data-badge-anim', 'true');
+      style.textContent = `
+@keyframes badgeAppear {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.3); opacity: 1; }
+  80% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes badgePulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+}
+.badge-new-animation {
+  animation: badgeAppear 1.2s ease-out, badgePulse 1.2s ease-out;
+}
+`;
+      document.head.appendChild(style);
     }
 
     // Dynamically import Leaflet (browser-only)
@@ -174,9 +206,9 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
         ((map as any).__stationCircles || []).forEach((c: any) => {
           c.setRadius(radius);
         });
-        ((map as any).__badgeMarkers || []).forEach(({ marker, dataUri }: any) => {
+        ((map as any).__badgeMarkers || []).forEach(({ marker, dataUri, animClass }: any) => {
           marker.setIcon(L.divIcon({
-            className: '',
+            className: animClass || '',
             html: `<img src="${dataUri}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
             iconSize: [badgeSize, badgeSize],
             iconAnchor: [badgeSize / 2, badgeSize / 2],
@@ -208,7 +240,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
       // ── Render GeoJSON features ──────────────────────────────────────────
       if (geojsonRef.current) {
-        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current);
+        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current, collectedStationIdsRef.current, newBadgeStationIdRef.current);
       }
 
       // Attach cleanup hooks
@@ -244,11 +276,11 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
     import('leaflet').then((L) => {
       if (mapRef.current) {
-        renderGeoJSON(L, mapRef.current, geojson, onFeatureClick, showAllBadges);
+        renderGeoJSON(L, mapRef.current, geojson, onFeatureClick, showAllBadges, collectedStationIds, newBadgeStationId);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geojson, showAllBadges]);
+  }, [geojson, showAllBadges, collectedStationIds, newBadgeStationId]);
 
   return (
     <div
@@ -272,6 +304,8 @@ function renderGeoJSON(
   geojson: FeatureCollection<Geometry, RailwayFeatureProperties>,
   onFeatureClick: (properties: RailwayFeatureProperties) => void,
   showAllBadges: boolean = false,
+  collectedStationIds?: Set<string>,
+  newBadgeStationId?: string | null,
 ) {
   // Ensure a dedicated feature layer exists
   let featureLayer: any = (map as any).__featureLayer;
@@ -330,33 +364,61 @@ function renderGeoJSON(
     const [lng, lat] = feature.geometry.coordinates as [number, number];
     const props = feature.properties;
 
-    const circle = L.circleMarker([lat, lng], {
-      radius,
-      fillColor: '#ffffff',
-      color: '#333333',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 1,
-    })
-      .on('click', () => onFeatureClick(props))
-      .addTo(featureLayer);
+    const stationId = props.feature_type === 'station' ? (props as any).station_id as string | undefined : undefined;
+    const isCollected = !!(stationId && collectedStationIds?.has(stationId));
+    const hasBadgeUrl = props.feature_type === 'station' && !!(props as any).badge_image_url;
+    const shouldShowBadge = hasBadgeUrl && (isCollected || showAllBadges);
 
-    (map as any).__stationCircles.push(circle);
+    // Collected stations: badge replaces the circle marker entirely.
+    // Non-collected stations (showAllBadges mode): badge overlays on top of circle.
+    if (!isCollected) {
+      const circle = L.circleMarker([lat, lng], {
+        radius,
+        fillColor: '#ffffff',
+        color: '#333333',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1,
+      })
+        .on('click', () => onFeatureClick(props))
+        .addTo(featureLayer);
 
-    // Show badge overlay when showAllBadges is enabled
-    if (showAllBadges && props.feature_type === 'station' && (props as any).badge_image_url) {
+      (map as any).__stationCircles.push(circle);
+    }
+
+    if (shouldShowBadge) {
       const rawBadge = (props as any).badge_image_url as string;
       const dataUri = toBadgeDataUri(rawBadge);
+      const isNewBadge = !!(stationId && newBadgeStationId && stationId === newBadgeStationId);
+      const animClass = isNewBadge ? 'badge-new-animation' : '';
       const badgeIcon = L.divIcon({
-        className: '',
+        className: animClass,
         html: `<img src="${dataUri}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
         iconSize: [badgeSize, badgeSize],
         iconAnchor: [badgeSize / 2, badgeSize / 2],
       });
-      const badgeMarker = L.marker([lat, lng], { icon: badgeIcon, interactive: false })
+      const badgeMarker = L.marker([lat, lng], { icon: badgeIcon, interactive: isCollected })
         .addTo(featureLayer);
 
-      (map as any).__badgeMarkers.push({ marker: badgeMarker, dataUri });
+      if (isCollected) {
+        badgeMarker.on('click', () => onFeatureClick(props));
+      }
+
+      (map as any).__badgeMarkers.push({ marker: badgeMarker, dataUri, animClass });
+    } else if (isCollected) {
+      // Collected but no badge_image_url — still render a circle as fallback
+      const circle = L.circleMarker([lat, lng], {
+        radius,
+        fillColor: '#ffffff',
+        color: '#333333',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 1,
+      })
+        .on('click', () => onFeatureClick(props))
+        .addTo(featureLayer);
+
+      (map as any).__stationCircles.push(circle);
     }
   });
 

@@ -19,7 +19,7 @@ CREATE TYPE railway_system_type AS ENUM (
   'KRTC',  -- Kaohsiung Rapid Transit Corporation (高雄捷運)
   'TMRT',  -- Taichung MRT (台中捷運)
   'NTMC',  -- New Taipei Metro (新北捷運)
-  'KLRT'   -- Keelung Light Rail (基隆輕軌)
+  'KLRT'   -- Keelung Light Rail (高雄輕軌)
 );
 
 -- ─────────────────────────────────────────────

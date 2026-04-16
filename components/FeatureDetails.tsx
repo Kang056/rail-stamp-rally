@@ -11,6 +11,8 @@ interface FeatureDetailsProps {
   feature: RailwayFeatureProperties | null;
   /** Called when the user dismisses the details panel */
   onClose: () => void;
+  /** Collected badges keyed by station_id */
+  collectedBadges?: Map<string, { unlocked_at: string; badge_image_url: string | null }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,16 +26,45 @@ const SYSTEM_LABELS: Record<string, string> = {
   KRTC: '高雄捷運 (KRTC)',
   TMRT: '台中捷運 (TMRT)',
   NTMC: '新北捷運 (NTMC)',
-  KLRT: '基隆輕軌 (KLRT)',
+  KLRT: '高雄輕軌 (KLRT)',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────────────────────────────────────
-function StationDetail({ station }: { station: StationProperties }) {
+function StationDetail({ station, collectedBadges }: { station: StationProperties; collectedBadges?: Map<string, { unlocked_at: string; badge_image_url: string | null }> }) {
+  const badge = collectedBadges?.get(station.station_id);
+
   return (
     <div className={styles.content}>
       <h2 className={styles.title}>{station.station_name}</h2>
+
+      {/* Badge section */}
+      <div className={styles.badgeSection}>
+        {badge ? (
+          <div className={styles.badgeCollected}>
+            {badge.badge_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={badge.badge_image_url.startsWith('data:') || badge.badge_image_url.startsWith('http') ? badge.badge_image_url : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(badge.badge_image_url)}`}
+                alt={`${station.station_name} 徽章`}
+                className={styles.badgeImage}
+              />
+            )}
+            <span className={styles.badgeDate}>
+              ✅ 已到訪 · {new Date(badge.unlocked_at).toLocaleDateString('zh-TW')}
+            </span>
+          </div>
+        ) : (
+          <div className={styles.badgeNotVisited}>
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={styles.badgePlaceholder}>
+              <circle cx="32" cy="32" r="28" stroke="#666" strokeWidth="2" strokeDasharray="4 4" fill="none" />
+              <text x="32" y="36" textAnchor="middle" fill="#666" fontSize="12" fontFamily="sans-serif">尚未到訪</text>
+            </svg>
+          </div>
+        )}
+      </div>
+
       <dl className={styles.metaList}>
         <dt>系統</dt>
         <dd>{SYSTEM_LABELS[station.system_type] ?? station.system_type}</dd>
@@ -99,7 +130,7 @@ function LineDetail({ line }: { line: LineProperties }) {
 // Renders detail content; layout (bottom-sheet vs sidebar) is handled by the
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FeatureDetails({ feature, onClose }: FeatureDetailsProps) {
+export default function FeatureDetails({ feature, onClose, collectedBadges }: FeatureDetailsProps) {
   if (!feature) {
     return (
       <div className={styles.empty}>
@@ -120,7 +151,7 @@ export default function FeatureDetails({ feature, onClose }: FeatureDetailsProps
       </button>
 
       {feature.feature_type === 'station' ? (
-        <StationDetail station={feature as StationProperties} />
+        <StationDetail station={feature as StationProperties} collectedBadges={collectedBadges} />
       ) : (
         <LineDetail line={feature as LineProperties} />
       )}

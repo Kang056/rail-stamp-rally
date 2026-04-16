@@ -10,17 +10,18 @@
 
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useEffect } from 'react';
-import type { RailwayFeatureProperties } from '@/lib/supabaseClient';
+import type { RailwayFeatureProperties, CollectedBadge } from '@/lib/supabaseClient';
+import type { User } from '@supabase/supabase-js';
 import FeatureDetails from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
-import { getAllRailwayGeoJSON } from '@/lib/supabaseClient';
+import { getAllRailwayGeoJSON, getUserCollectedBadges } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
 import AuthButton from '@/components/AuthButton';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
 // Map must be dynamically imported with ssr:false (Leaflet is browser-only).
-const Map = dynamic(() => import('@/components/Map'), {
+const LeafletMap = dynamic(() => import('@/components/Map'), {
   ssr: false,
   loading: () => (
     <div className={styles.mapLoading} aria-live="polite">
@@ -39,6 +40,10 @@ export default function HomePage() {
     useState<RailwayFeatureProperties | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [showAllBadges, setShowAllBadges] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [collectedStationIds, setCollectedStationIds] = useState<Set<string>>(new Set());
+  const [collectedBadgesMap, setCollectedBadgesMap] = useState<Map<string, { unlocked_at: string; badge_image_url: string | null }>>(new Map());
+  const [newBadgeStationId, setNewBadgeStationId] = useState<string | null>(null);
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
@@ -55,6 +60,27 @@ export default function HomePage() {
   const handleClose = useCallback(() => {
     setSheetOpen(false);
     setSelectedFeature(null);
+  }, []);
+
+  const handleAuthChange = useCallback((u: User | null) => {
+    setUser(u);
+    if (!u) {
+      // Requirement 9: Logout resets map
+      setCollectedStationIds(new Set());
+      setCollectedBadgesMap(new Map());
+      setNewBadgeStationId(null);
+    }
+  }, []);
+
+  const handleBadgeSuccess = useCallback((result: { station_id: string; station_name: string; badge_image_url: string | null }) => {
+    setCollectedStationIds((prev) => new Set(prev).add(result.station_id));
+    setCollectedBadgesMap((prev) => {
+      const next = new Map(prev);
+      next.set(result.station_id, { unlocked_at: new Date().toISOString(), badge_image_url: result.badge_image_url });
+      return next;
+    });
+    setNewBadgeStationId(result.station_id);
+    setTimeout(() => setNewBadgeStationId(null), 2000);
   }, []);
 
   const [geojson, setGeojson] = useState<any | null>(null);
@@ -79,6 +105,18 @@ export default function HomePage() {
     fetchGeo();
   }, [fetchGeo]);
 
+  useEffect(() => {
+    if (!user) return;
+    getUserCollectedBadges(user.id).then((badges) => {
+      const ids = new Set(badges.map((b) => b.station_id));
+      const map = new Map(badges.map((b) => [b.station_id, { unlocked_at: b.unlocked_at, badge_image_url: b.badge_image_url }]));
+      setCollectedStationIds(ids);
+      setCollectedBadgesMap(map);
+    }).catch((err) => {
+      console.error('Failed to fetch user badges:', err);
+    });
+  }, [user]);
+
   return (
     <main className={styles.main}>
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -92,6 +130,7 @@ export default function HomePage() {
           <FeatureDetails
             feature={selectedFeature}
             onClose={handleClose}
+            collectedBadges={collectedBadgesMap}
           />
         </div>
       </aside>
@@ -100,8 +139,8 @@ export default function HomePage() {
       <section className={styles.mapSection} aria-label="Interactive railway map">
         {/* Badge checkin overlay (non-blocking) */}
         <div className={styles.badgeOverlay}>
-          <AuthButton />
-          <BadgeCheckin onSuccess={fetchGeo} />
+          <AuthButton onAuthChange={handleAuthChange} />
+          <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
         </div>
 
         {/* Show a small loading / error indicator when fetching real data */}
@@ -116,7 +155,13 @@ export default function HomePage() {
           </div>
         )}
 
-        <Map geojson={geojson} onFeatureClick={handleFeatureClick} showAllBadges={showAllBadges} />
+        <LeafletMap
+          geojson={geojson}
+          onFeatureClick={handleFeatureClick}
+          showAllBadges={showAllBadges}
+          collectedStationIds={collectedStationIds}
+          newBadgeStationId={newBadgeStationId}
+        />
 
         {/* Test button: toggle all station badges */}
         <button
@@ -146,6 +191,7 @@ export default function HomePage() {
                 <FeatureDetails
                   feature={selectedFeature}
                   onClose={handleClose}
+                  collectedBadges={collectedBadgesMap}
                 />
               </div>
             </Drawer.Content>
