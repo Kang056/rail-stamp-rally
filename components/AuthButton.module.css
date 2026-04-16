@@ -160,7 +160,8 @@
   font-weight: 600;
   color: #111;
   text-align: center;
-  word-break: break-all;
+  word-break: break-word;
+  overflow-wrap: break-word;
   max-width: 240px;
 }
 
