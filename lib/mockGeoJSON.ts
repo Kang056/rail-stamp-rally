@@ -30,6 +30,9 @@ export const MOCK_GEOJSON: FeatureCollection<Geometry, RailwayFeatureProperties>
         established_year: null,
         history_desc: null,
         history_image_url: null,
+        // Sample badge for demo/development mode — a gold circle with "TRA" label
+        badge_image_url:
+          'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PGNpcmNsZSBjeD0iMTgiIGN5PSIxOCIgcj0iMTYiIGZpbGw9IiNmZmQ3MDAiIHN0cm9rZT0iI2I4ODYwYiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTgiIHk9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMzMzMiPlRSQTwvdGV4dD48L3N2Zz4K',
       } as RailwayFeatureProperties,
     },
   ],
