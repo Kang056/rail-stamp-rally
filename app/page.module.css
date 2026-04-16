@@ -69,68 +69,7 @@
   overflow-y: auto;
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   Desktop breakpoint — show sidebar, hide bottom sheet
-   ══════════════════════════════════════════════════════════════════ */
-@media (min-width: 768px) {
-  .main {
-    flex-direction: row;
-  }
-
-  /* Left sidebar: fixed width, dark background */
-  .sidebar {
-    display: flex;
-    flex-direction: column;
-    width: 320px;
-    min-width: 320px;
-    max-width: 320px;
-    height: 100%;
-    background: #1a1a2e;
-    border-right: 1px solid #2e2e4e;
-    position: relative; /* NOT absolute — part of flex flow */
-    z-index: 10;
-    color: #f0f0f0;
-  }
-
-  /* Hide bottom sheet on desktop */
-  .mobileOnly {
-    display: none;
-  }
-}
-
-/* Badge & auth overlay */
-.topRightOverlay {
-  position: absolute;
-  right: 1rem;
-  top: 1rem;
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
-}
-
-/* Mock login button */
-.mockLoginBtn {
-  background: #1a1a2e;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  padding: 0.45rem 0.85rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: background 0.2s, border-color 0.2s;
-  white-space: nowrap;
-}
-
-.mockLoginBtn:hover {
-  background: #2e2e4e;
-  border-color: rgba(255, 255, 255, 0.45);
-}
-
-/* ── Icon button (desktop — used for 收集進度, 模擬登入) ──────────── */
+/* ── Icon button (shared round 44px button style) ─────────────── */
 .iconBtn {
   position: relative;
   width: 44px;
@@ -203,12 +142,12 @@
   opacity: 1;
 }
 
-/* ── Bottom action bar (打卡 + 收集進度) ──────────────────────────── */
+/* ── Bottom action bar (desktop: 帳號 + 打卡 + 模擬登入) ─────────── */
 .bottomBar {
   position: absolute;
   bottom: 2rem;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 1000;
   display: none;
   align-items: flex-end;
@@ -221,44 +160,7 @@
   pointer-events: auto;
 }
 
-/* Map action button (收集進度 etc.) */
-.mapActionBtn {
-  background: #1a1a2e;
-  color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  padding: 0.45rem 0.75rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.8rem;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: background 0.2s, border-color 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  min-width: 56px;
-}
-
-.mapActionBtn:hover {
-  background: #2e2e4e;
-  border-color: rgba(255, 255, 255, 0.45);
-}
-
-.btnLabel {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-}
-
-/* Spacer (same width as mapActionBtn for centering the check-in button) */
-.mapActionSpacer {
-  min-width: 56px;
-  height: 1px;
-  pointer-events: none;
-}
-
-/* ── Mobile toolbar (Google Maps-style bottom nav) ──────────────── */
+/* ── Mobile toolbar (icon-only bottom nav) ──────────────────────── */
 .mobileToolbar {
   position: fixed;
   bottom: 0;
@@ -275,6 +177,7 @@
 }
 
 .toolbarItem {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -293,12 +196,45 @@
   color: #20b8d4;
 }
 
-.toolbarLabel {
-  font-size: 0.6rem;
+/* Requirement 5: hidden but preserves space */
+.toolbarItemHidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ── Tooltip for mobile toolbar items ────────────────────────────── */
+.toolbarTooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
   font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.03em;
   white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  letter-spacing: 0.05em;
+  z-index: 10;
+}
+
+.toolbarTooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.82);
+}
+
+.toolbarItem:hover .toolbarTooltip,
+.toolbarItem:focus-visible .toolbarTooltip {
+  opacity: 1;
 }
 
 /* Utility: hidden on mobile, visible on desktop */
@@ -306,7 +242,7 @@
   display: none;
 }
 
-/* ── Vaul Drawer (mobile bottom sheet replacement) ──────────────── */
+/* ── Vaul Drawer (mobile bottom sheet — unified styling) ────────── */
 .drawerOverlay {
   position: fixed;
   inset: 0;
@@ -332,7 +268,7 @@
 .drawerInner {
   flex: 1;
   overflow-y: auto;
-  padding: 0 1rem 1rem;
+  padding: 0.5rem 1rem 1rem;
   padding-bottom: calc(60px + env(safe-area-inset-bottom, 0));
 }
 
@@ -349,7 +285,30 @@
   border-width: 0;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   Desktop breakpoint — show sidebar, hide mobile elements
+   ══════════════════════════════════════════════════════════════════ */
 @media (min-width: 768px) {
+  .main {
+    flex-direction: row;
+  }
+
+  /* Left sidebar: fixed width, dark background */
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 320px;
+    min-width: 320px;
+    max-width: 320px;
+    height: 100%;
+    background: #1a1a2e;
+    border-right: 1px solid #2e2e4e;
+    position: relative; /* NOT absolute — part of flex flow */
+    z-index: 10;
+    color: #f0f0f0;
+  }
+
+  /* Hide bottom sheet on desktop */
   .mobileOnly {
     display: none;
   }
@@ -361,8 +320,6 @@
   }
   .bottomBar {
     display: flex;
-    left: 0;
-    right: 0;
   }
   .drawerInner {
     padding-bottom: 1rem;

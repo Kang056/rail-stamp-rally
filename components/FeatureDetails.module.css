@@ -9,22 +9,28 @@
 
 .closeButton {
   position: absolute;
-  top: 0.75rem;
-  right: 0.75rem;
-  background: transparent;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 32px;
+  height: 32px;
+  background: rgba(128, 128, 128, 0.1);
   border: none;
-  font-size: 1.1rem;
+  font-size: 1rem;
   cursor: pointer;
   color: inherit;
   opacity: 0.6;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  padding: 0;
+  border-radius: 50%;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
 
 .closeButton:hover {
   opacity: 1;
-  background: rgba(128, 128, 128, 0.15);
+  background: rgba(128, 128, 128, 0.2);
 }
 
 .content {
@@ -32,13 +38,13 @@
 }
 
 .title {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 700;
   margin: 0 0 0.75rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding-right: 2rem; /* avoid overlap with close button */
+  padding-right: 2.5rem; /* avoid overlap with close button */
   color: inherit;
 }
 
@@ -56,7 +62,7 @@
   column-gap: 1rem;
   row-gap: 0.35rem;
   margin: 0 0 1rem;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
 }
 
 .metaList dt {
@@ -78,7 +84,7 @@
 }
 
 .historyDesc {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.75;
   margin: 0;
   letter-spacing: 0.02em;
@@ -104,12 +110,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .badgeImage {
-  width: 80px;
-  height: 80px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid gold;
@@ -117,7 +123,7 @@
 }
 
 .badgeDate {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #4caf50;
   font-weight: 600;
 }
@@ -136,13 +142,13 @@
 
 /* ── Badge time ───────────────────────────────────────────────── */
 .badgeTime {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #aaa;
 }
 
 /* ── Collection progress section ───────────────────────────────── */
 .progressSection {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   text-align: left;
 }
 
@@ -243,7 +249,7 @@
 }
 
 .progressCount {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   margin-top: 0.15rem;
   text-align: right;
 }

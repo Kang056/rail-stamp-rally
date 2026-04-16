@@ -219,6 +219,8 @@ export default function HomePage() {
     });
   }, [geojson]);
 
+  const isLoggedIn = !!user || mockLogin;
+
   return (
     <main className={styles.main}>
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -245,22 +247,6 @@ export default function HomePage() {
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
-        {/* ── Top-right: 登入/登出 + 模擬登入 (desktop only) ── */}
-        <div className={`${styles.topRightOverlay} ${styles.desktopOnly}`}>
-          <AuthButton onAuthChange={handleAuthChange} />
-          <button
-            className={`${styles.iconBtn} ${mockLogin ? styles.iconBtnActive : ''}`}
-            onClick={handleMockLoginToggle}
-            aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
-          >
-            <span className={styles.iconTooltip}>模擬登入</span>
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 2h6" />
-              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
-            </svg>
-          </button>
-        </div>
-
         {/* Show a small loading / error indicator when fetching real data */}
         {loadingGeo && (
           <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 900 }} aria-live="polite">
@@ -283,50 +269,43 @@ export default function HomePage() {
           showStations={showStations}
         />
 
-        {/* ── Bottom bar (desktop only): 打卡 (center) + 收集進度 (left) ── */}
-        <div className={styles.bottomBar}>
+        {/* ── Desktop bottom bar: 帳號 + 打卡 + 模擬登入 (no badge progress) ── */}
+        <div className={`${styles.bottomBar} ${styles.desktopOnly}`}>
+          <AuthButton onAuthChange={handleAuthChange} />
+          <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
           <button
-            className={styles.iconBtn}
-            onClick={() => {
-              setSheetOpen(false);
-              setMobileProgressOpen(true);
-            }}
-            aria-label="開啟徽章收集進度"
+            className={`${styles.iconBtn} ${mockLogin ? styles.iconBtnActive : ''}`}
+            onClick={handleMockLoginToggle}
+            aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
           >
-            <span className={styles.iconTooltip}>收集進度</span>
+            <span className={styles.iconTooltip}>模擬登入</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-              <path d="M4 22h16" />
-              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+              <path d="M9 2h6" />
+              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
             </svg>
           </button>
-
-          <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
         </div>
 
-        {/* ── Mobile toolbar (Google Maps-style bottom nav) ── */}
+        {/* ── Mobile toolbar (icon-only bottom nav with tooltips) ── */}
         <nav className={styles.mobileToolbar} aria-label="主要功能列">
           <div className={styles.toolbarItem}>
             <AuthButton onAuthChange={handleAuthChange} />
-            <span className={styles.toolbarLabel}>帳號</span>
           </div>
 
-          <div className={styles.toolbarItem}>
+          <div className={`${styles.toolbarItem} ${!isLoggedIn ? styles.toolbarItemHidden : ''}`}>
             <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
-            <span className={styles.toolbarLabel}>打卡</span>
           </div>
 
           <button
-            className={styles.toolbarItem}
+            className={`${styles.toolbarItem} ${!isLoggedIn ? styles.toolbarItemHidden : ''}`}
             onClick={() => {
               setSheetOpen(false);
               setMobileProgressOpen(true);
             }}
             aria-label="開啟徽章收集進度"
+            disabled={!isLoggedIn}
           >
+            <span className={styles.toolbarTooltip}>收集進度</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
               <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
@@ -335,7 +314,6 @@ export default function HomePage() {
               <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
               <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
             </svg>
-            <span className={styles.toolbarLabel}>收集</span>
           </button>
 
           <button
@@ -343,11 +321,11 @@ export default function HomePage() {
             onClick={handleMockLoginToggle}
             aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
           >
+            <span className={styles.toolbarTooltip}>模擬登入</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 2h6" />
               <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
             </svg>
-            <span className={styles.toolbarLabel}>模擬</span>
           </button>
         </nav>
       </section>
