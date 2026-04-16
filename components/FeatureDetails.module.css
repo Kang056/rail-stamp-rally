@@ -60,7 +60,6 @@
 }
 
 .metaList dt {
-  opacity: 0.6;
   white-space: nowrap;
 }
 
@@ -82,19 +81,16 @@
   font-size: 0.9rem;
   line-height: 1.75;
   margin: 0;
-  opacity: 0.9;
   letter-spacing: 0.02em;
 }
 
 .empty {
   padding: 1rem;
   text-align: center;
-  opacity: 0.6;
 }
 
 .emptyHint {
   font-size: 0.8rem;
-  opacity: 0.5;
 }
 
 /* ── Badge section in station detail ───────────────────────────── */
@@ -163,7 +159,6 @@
 .progressLabel {
   font-size: 0.8rem;
   margin-bottom: 0.25rem;
-  opacity: 0.85;
 }
 
 .progressBarOuter {
@@ -184,7 +179,6 @@
 
 .progressCount {
   font-size: 0.75rem;
-  opacity: 0.6;
   margin-top: 0.15rem;
   text-align: right;
 }

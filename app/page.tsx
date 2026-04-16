@@ -44,6 +44,8 @@ export default function HomePage() {
   const [collectedStationIds, setCollectedStationIds] = useState<Set<string>>(new Set());
   const [collectedBadgesMap, setCollectedBadgesMap] = useState<Map<string, { unlocked_at: string; badge_image_url: string | null }>>(new Map());
   const [newBadgeStationId, setNewBadgeStationId] = useState<string | null>(null);
+  const [mobileProgressOpen, setMobileProgressOpen] = useState(false);
+  const [mockLogin, setMockLogin] = useState(false);
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
@@ -147,6 +149,60 @@ export default function HomePage() {
     return counts;
   }, [geojson, collectedBadgesMap]);
 
+  // Generate mock badge data for "模擬登入" mode
+  const handleMockLoginToggle = useCallback(() => {
+    setMockLogin((prev) => {
+      const next = !prev;
+      if (next && geojson) {
+        const ids = new Set<string>();
+        const badgesMap = new Map<string, { unlocked_at: string; badge_image_url: string | null }>();
+
+        const stationsBySystem = new Map<string, Array<{ station_id: string; badge_image_url: string | null }>>();
+        geojson.features.forEach((f: any) => {
+          if (f.properties.feature_type === 'station') {
+            const sys = f.properties.system_type as string;
+            if (!stationsBySystem.has(sys)) stationsBySystem.set(sys, []);
+            stationsBySystem.get(sys)!.push({
+              station_id: f.properties.station_id,
+              badge_image_url: f.properties.badge_image_url ?? null,
+            });
+          }
+        });
+
+        stationsBySystem.forEach((stations, sys) => {
+          let ratio: number;
+          if (sys === 'HSR') {
+            ratio = 1; // 100%
+          } else if (sys === 'KLRT') {
+            ratio = 0; // 0%
+          } else {
+            ratio = 0.5 + Math.random() * 0.3; // 50%-80%
+          }
+
+          const shuffled = [...stations].sort(() => Math.random() - 0.5);
+          const count = Math.round(shuffled.length * ratio);
+          for (let i = 0; i < count; i++) {
+            const s = shuffled[i];
+            ids.add(s.station_id);
+            badgesMap.set(s.station_id, {
+              unlocked_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+              badge_image_url: s.badge_image_url,
+            });
+          }
+        });
+
+        setCollectedStationIds(ids);
+        setCollectedBadgesMap(badgesMap);
+        setShowAllBadges(true);
+      } else {
+        setCollectedStationIds(new Set());
+        setCollectedBadgesMap(new Map());
+        setShowAllBadges(false);
+      }
+      return next;
+    });
+  }, [geojson]);
+
   return (
     <main className={styles.main}>
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
@@ -195,14 +251,35 @@ export default function HomePage() {
           newBadgeStationId={newBadgeStationId}
         />
 
-        {/* Test button: toggle all station badges */}
+        {/* Mock login toggle: generates random badge data */}
         <button
           className={styles.showBadgesBtn}
-          onClick={() => setShowAllBadges((v) => !v)}
-          aria-label={showAllBadges ? '隱藏所有徽章' : '顯示所有徽章'}
+          onClick={handleMockLoginToggle}
+          aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
         >
-          {showAllBadges ? '🏅 隱藏徽章' : '🏅 顯示所有徽章'}
+          {mockLogin ? '🔓 模擬登入中' : '🔐 模擬登入'}
         </button>
+
+        {/* ── Mobile collection progress panel ── */}
+        <div className={`${styles.mobileOnly} ${styles.mobileProgressWrapper}`}>
+          <button
+            className={styles.mobileProgressToggle}
+            onClick={() => setMobileProgressOpen((v) => !v)}
+          >
+            {mobileProgressOpen ? '🏅 收起進度' : '🏅 收集進度'}
+          </button>
+          {mobileProgressOpen && stationCountsBySystem && stationCountsBySystem.size > 0 && (
+            <div className={styles.mobileProgressPanel}>
+              <FeatureDetails
+                feature={null}
+                onClose={() => setMobileProgressOpen(false)}
+                collectedBadges={collectedBadgesMap}
+                stationCountsBySystem={stationCountsBySystem}
+                collectedCountsBySystem={collectedCountsBySystem}
+              />
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ── Mobile bottom sheet (hidden on desktop via CSS) ── */}

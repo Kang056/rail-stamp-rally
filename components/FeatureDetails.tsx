@@ -76,8 +76,12 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
         <dt>系統</dt>
         <dd>{SYSTEM_LABELS[station.system_type] ?? station.system_type}</dd>
 
-        <dt>路線代碼</dt>
-        <dd>{station.line_id}</dd>
+        {station.line_id && (
+          <>
+            <dt>路線代碼</dt>
+            <dd>{station.line_id}</dd>
+          </>
+        )}
 
         <dt>車站代碼</dt>
         <dd>{station.station_id}</dd>
@@ -121,8 +125,12 @@ function LineDetail({ line }: { line: LineProperties }) {
         <dt>系統</dt>
         <dd>{SYSTEM_LABELS[line.system_type] ?? line.system_type}</dd>
 
-        <dt>路線代碼</dt>
-        <dd>{line.line_id}</dd>
+        {line.line_id && (
+          <>
+            <dt>路線代碼</dt>
+            <dd>{line.line_id}</dd>
+          </>
+        )}
       </dl>
 
       {line.history_desc && (
