@@ -1,6 +1,16 @@
 import type { FeatureCollection, Geometry } from 'geojson';
 import type { RailwayFeatureProperties } from '@/lib/supabaseClient';
 
+// Demo badge: gold circle with "TRA" label (used in development / fallback mode)
+const MOCK_BADGE_SVG = [
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36">',
+  '<circle cx="18" cy="18" r="16" fill="#ffd700" stroke="#b8860b" stroke-width="2"/>',
+  '<text x="18" y="24" text-anchor="middle" font-size="14"',
+  ' font-family="sans-serif" font-weight="bold" fill="#333">TRA</text>',
+  '</svg>',
+].join('');
+const MOCK_BADGE_URL = `data:image/svg+xml;base64,${btoa(MOCK_BADGE_SVG)}`;
+
 export const MOCK_GEOJSON: FeatureCollection<Geometry, RailwayFeatureProperties> = {
   type: 'FeatureCollection',
   features: [
@@ -30,9 +40,7 @@ export const MOCK_GEOJSON: FeatureCollection<Geometry, RailwayFeatureProperties>
         established_year: null,
         history_desc: null,
         history_image_url: null,
-        // Sample badge for demo/development mode — a gold circle with "TRA" label
-        badge_image_url:
-          'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PGNpcmNsZSBjeD0iMTgiIGN5PSIxOCIgcj0iMTYiIGZpbGw9IiNmZmQ3MDAiIHN0cm9rZT0iI2I4ODYwYiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iMTgiIHk9IjI0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiMzMzMiPlRSQTwvdGV4dD48L3N2Zz4K',
+        badge_image_url: MOCK_BADGE_URL,
       } as RailwayFeatureProperties,
     },
   ],
