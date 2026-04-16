@@ -15,6 +15,7 @@ import FeatureDetails from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
 import { getAllRailwayGeoJSON } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
+import AuthButton from '@/components/AuthButton';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
@@ -99,6 +100,7 @@ export default function HomePage() {
       <section className={styles.mapSection} aria-label="Interactive railway map">
         {/* Badge checkin overlay (non-blocking) */}
         <div className={styles.badgeOverlay}>
+          <AuthButton />
           <BadgeCheckin onSuccess={fetchGeo} />
         </div>
 

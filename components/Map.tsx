@@ -28,6 +28,35 @@ interface MapProps {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Zoom-based sizing helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maps zoom level to station CircleMarker radius (px). Default zoom 8 → 12px. */
+function getRadiusForZoom(zoom: number): number {
+  if (zoom <= 7) return 8;
+  if (zoom <= 8) return 12;
+  if (zoom <= 10) return 14;
+  if (zoom <= 12) return 16;
+  if (zoom <= 14) return 20;
+  return 24;
+}
+
+/** Badge icon size scales proportionally to station radius. */
+function getBadgeSizeForZoom(zoom: number): number {
+  return Math.round(getRadiusForZoom(zoom) * 1.5);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SVG data URI helper — badge_image_url may contain raw SVG markup
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toBadgeDataUri(raw: string): string {
+  if (raw.startsWith('data:') || raw.startsWith('http')) return raw;
+  // Raw SVG string → data URI
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(raw)}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Filmstrip (膠捲) polyline helper
 //
 // Intercity railways (TRA / HSR) are rendered as two stacked polylines:
@@ -39,7 +68,6 @@ interface MapProps {
 function addFilmstripPolyline(
   L: typeof import('leaflet'),
   target: any,
-  // GeoJSON coordinates array: [lng, lat][]
   coordinates: [number, number][],
   color: string,
   onClick?: () => void,
@@ -78,7 +106,6 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
   // Keep refs up-to-date so the async Leaflet init callback always uses the
   // latest prop values, even if they arrive before the map is ready.
-  // Updating refs directly in render is intentional — ref writes never cause re-renders.
   const geojsonRef = useRef(geojson);
   const onFeatureClickRef = useRef(onFeatureClick);
   const showAllBadgesRef = useRef(showAllBadges);
@@ -89,6 +116,9 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
     initializingRef.current = true;
+
+    // Track whether this effect was cleaned up (React Strict Mode double-invoke)
+    let cancelled = false;
 
     // Ensure Leaflet CSS is present (CDN fallback)
     if (typeof document !== 'undefined' && !document.querySelector('link[data-leaflet-css]')) {
@@ -102,6 +132,12 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
     // Dynamically import Leaflet (browser-only)
     import('leaflet').then((L) => {
+      // Guard: component may have unmounted or another init may have won the race
+      if (cancelled || !containerRef.current || mapRef.current) {
+        initializingRef.current = false;
+        return;
+      }
+
       // Fix default marker icon paths broken by webpack
       /* eslint-disable */
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -113,10 +149,9 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
       });
 
       // ── Initialize map with Canvas renderer for performance ──────────────
-      // Canvas renderer is crucial when rendering thousands of station points.
-      const map = L.map(containerRef.current!, {
+      const map = L.map(containerRef.current, {
         renderer: L.canvas(),
-        center: [23.9, 121.0], // Geographic center of Taiwan
+        center: [23.9, 121.0],
         zoom: 8,
         zoomControl: true,
         attributionControl: true,
@@ -124,12 +159,30 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
       mapRef.current = map;
 
-      // Create/attach a feature layer group for geojson layers (so we can clear and re-add)
-      if (!(map as any).__featureLayer) {
-        (map as any).__featureLayer = L.layerGroup().addTo(map);
-      } else {
-        (map as any).__featureLayer.clearLayers();
-      }
+      // Feature layer group for geojson layers
+      (map as any).__featureLayer = L.layerGroup().addTo(map);
+      // Arrays for zoom-based size updates
+      (map as any).__stationCircles = [] as any[];
+      (map as any).__badgeMarkers = [] as any[];
+
+      // ── Zoom-based marker scaling ────────────────────────────────────────
+      map.on('zoomend', () => {
+        const zoom = map.getZoom();
+        const radius = getRadiusForZoom(zoom);
+        const badgeSize = getBadgeSizeForZoom(zoom);
+
+        ((map as any).__stationCircles || []).forEach((c: any) => {
+          c.setRadius(radius);
+        });
+        ((map as any).__badgeMarkers || []).forEach(({ marker, dataUri }: any) => {
+          marker.setIcon(L.divIcon({
+            className: '',
+            html: `<img src="${dataUri}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
+            iconSize: [badgeSize, badgeSize],
+            iconAnchor: [badgeSize / 2, badgeSize / 2],
+          }));
+        });
+      });
 
       // ── Base tile layer (OpenStreetMap) ───────────────────────────────────
       const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -144,32 +197,31 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
         setTimeout(() => { try { map.invalidateSize(true); } catch (e) { /* ignore */ } }, 300);
       });
 
-      // Ensure correct sizing after layout/rendering (fixes visual tile artifacts)
       map.whenReady(() => {
         try { map.invalidateSize(true); } catch (e) { /* ignore */ }
         setTimeout(() => { try { map.invalidateSize(true); } catch (e) { /* ignore */ } }, 500);
       });
 
-      // Resize handler to keep tiles in sync with container size
+      // Resize handler
       const onResize = () => { try { map.invalidateSize(); } catch (e) { /* ignore */ } };
       window.addEventListener('resize', onResize);
 
       // ── Render GeoJSON features ──────────────────────────────────────────
-      // Use refs here so we pick up any geojson that arrived while Leaflet
-      // was still loading (fixes the async race condition on mobile).
       if (geojsonRef.current) {
         renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current);
       }
 
-      // attach cleanup hooks
+      // Attach cleanup hooks
       (map as any).__onCleanup = () => {
         window.removeEventListener('resize', onResize);
         tileLayer.off('load');
+        map.off('zoomend');
       };
     });
 
     // Cleanup on unmount
     return () => {
+      cancelled = true;
       try {
         const map = mapRef.current;
         if (map) {
@@ -191,7 +243,9 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
     if (!mapRef.current || !geojson) return;
 
     import('leaflet').then((L) => {
-      renderGeoJSON(L, mapRef.current!, geojson, onFeatureClick, showAllBadges);
+      if (mapRef.current) {
+        renderGeoJSON(L, mapRef.current, geojson, onFeatureClick, showAllBadges);
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojson, showAllBadges]);
@@ -227,6 +281,14 @@ function renderGeoJSON(
     featureLayer.clearLayers();
   }
 
+  // Reset stored references for zoom scaling
+  (map as any).__stationCircles = [];
+  (map as any).__badgeMarkers = [];
+
+  const currentZoom = map.getZoom();
+  const radius = getRadiusForZoom(currentZoom);
+  const badgeSize = getBadgeSizeForZoom(currentZoom);
+
   const lines = geojson.features.filter((f) => f.properties.feature_type === 'line');
   const stations = geojson.features.filter((f) => f.properties.feature_type === 'station');
 
@@ -250,11 +312,9 @@ function renderGeoJSON(
 
     extractCoordinateArrays().forEach((coords) => {
       if (isIntercity) {
-        // Filmstrip style: HSR=orange-on-white, TRA=black-on-white per design spec §4.2
         const filmColor = props.system_type === 'HSR' ? '#db691d' : '#000000';
         addFilmstripPolyline(L, featureLayer, coords, filmColor, () => onFeatureClick(props));
       } else {
-        // Solid colored line for metro/MRT systems
         const latLngs = coords.map(([lng, lat]) => L.latLng(lat, lng));
         L.polyline(latLngs, { color, weight: 4, opacity: 0.85 })
           .on('click', () => onFeatureClick(props))
@@ -270,8 +330,8 @@ function renderGeoJSON(
     const [lng, lat] = feature.geometry.coordinates as [number, number];
     const props = feature.properties;
 
-    L.circleMarker([lat, lng], {
-      radius: 24,
+    const circle = L.circleMarker([lat, lng], {
+      radius,
       fillColor: '#ffffff',
       color: '#333333',
       weight: 2,
@@ -281,17 +341,22 @@ function renderGeoJSON(
       .on('click', () => onFeatureClick(props))
       .addTo(featureLayer);
 
+    (map as any).__stationCircles.push(circle);
+
     // Show badge overlay when showAllBadges is enabled
     if (showAllBadges && props.feature_type === 'station' && (props as any).badge_image_url) {
-      const badgeUrl = (props as any).badge_image_url as string;
+      const rawBadge = (props as any).badge_image_url as string;
+      const dataUri = toBadgeDataUri(rawBadge);
       const badgeIcon = L.divIcon({
         className: '',
-        html: `<img src="${badgeUrl}" style="width:36px;height:36px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));" alt="badge" />`,
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
+        html: `<img src="${dataUri}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
+        iconSize: [badgeSize, badgeSize],
+        iconAnchor: [badgeSize / 2, badgeSize / 2],
       });
-      L.marker([lat, lng], { icon: badgeIcon, interactive: false })
+      const badgeMarker = L.marker([lat, lng], { icon: badgeIcon, interactive: false })
         .addTo(featureLayer);
+
+      (map as any).__badgeMarkers.push({ marker: badgeMarker, dataUri });
     }
   });
 

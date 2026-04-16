@@ -31,7 +31,8 @@ AS $$
         'line_id',            line_id,
         'established_year',   established_year,
         'history_desc',       history_desc,
-        'history_image_url',  history_image_url
+        'history_image_url',  history_image_url,
+        'badge_image_url',    badge_image_url
       )
     ) AS feature
     FROM public.railway_stations
