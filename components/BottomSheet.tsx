@@ -7,6 +7,7 @@
  * to full-screen or fully closed/dismissed.
  */
 
+import { useState, useEffect } from 'react';
 import { Drawer } from 'vaul';
 import styles from './BottomSheet.module.css';
 
@@ -24,6 +25,7 @@ interface BottomSheetProps {
 }
 
 const SNAP_POINTS = [0.5, 1] as const;
+const DEFAULT_SNAP = SNAP_POINTS[0]; // 50% of viewport
 
 export default function BottomSheet({
   open,
@@ -32,12 +34,24 @@ export default function BottomSheet({
   children,
   modal = false,
 }: BottomSheetProps) {
+  const [activeSnap, setActiveSnap] = useState<number | string | null>(DEFAULT_SNAP);
+
+  // Reset to default (half-screen) snap point every time the sheet opens
+  useEffect(() => {
+    if (open) {
+      setActiveSnap(DEFAULT_SNAP);
+    }
+  }, [open]);
+
   return (
     <Drawer.Root
       open={open}
       onOpenChange={onOpenChange}
       modal={modal}
       snapPoints={[...SNAP_POINTS]}
+      activeSnapPoint={activeSnap}
+      setActiveSnapPoint={setActiveSnap}
+      fadeFromIndex={1}
     >
       <Drawer.Portal>
         {modal && <Drawer.Overlay className={styles.overlay} />}

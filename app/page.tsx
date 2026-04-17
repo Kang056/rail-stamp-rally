@@ -105,10 +105,25 @@ export default function HomePage() {
   const [showStations, setShowStations] = useState<boolean>(true);
   const handleToggleStations = useCallback(() => setShowStations((v) => !v), []);
 
+  // Close train dialog when desktop panel switches away from 'train'
+  useEffect(() => {
+    if (!isMobile && desktopPanel !== 'train') {
+      setTrainDialogOpen(false);
+    }
+  }, [desktopPanel, isMobile]);
+
+  // Clear station pick target whenever train dialog closes
+  useEffect(() => {
+    if (!trainDialogOpen) {
+      setStationPickTarget(null);
+    }
+  }, [trainDialogOpen]);
+
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
     // If in station-picking mode for train schedule, intercept station clicks
-    if (stationPickTarget && props.feature_type === 'station') {
+    // Only intercept when the train dialog is actually open
+    if (stationPickTarget && trainDialogOpen && props.feature_type === 'station') {
       if ((props as any).system_type === 'TRA') {
         setPickedStation({
           stationId: (props as any).station_id,
@@ -130,7 +145,7 @@ export default function HomePage() {
     } else {
       setDesktopPanel('details');
     }
-  }, [stationPickTarget, showToast]);
+  }, [stationPickTarget, trainDialogOpen, showToast]);
 
   const handleClose = useCallback(() => {
     setSheetOpen(false);
@@ -363,7 +378,7 @@ export default function HomePage() {
           {/* Checkin (visible only when logged in) */}
           {isLoggedIn && (
             <div className={styles.iconBarBtnWrap}>
-              <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
+              <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} onToast={showToast} />
             </div>
           )}
 
@@ -552,7 +567,7 @@ export default function HomePage() {
           </div>
 
           <div className={`${styles.toolbarItem} ${!isLoggedIn ? styles.toolbarItemHidden : ''}`}>
-            <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
+            <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} onToast={showToast} />
           </div>
 
           <button

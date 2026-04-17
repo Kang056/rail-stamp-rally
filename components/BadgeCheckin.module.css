@@ -1,14 +1,5 @@
 /* BadgeCheckin.module.css */
 
-/* ── Wrapper ─────────────────────────────────────────────────────── */
-.wrapper {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 /* ── Icon button ──────────────────────────────────────────────────── */
 .checkinBtn {
   position: relative;
@@ -17,8 +8,10 @@
   border: none;
   cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   padding: 4px;
   outline: none;
   flex-shrink: 0;
@@ -44,38 +37,14 @@
   cursor: wait;
 }
 
-/* ── Tooltip ──────────────────────────────────────────────────────── */
-.tooltip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.82);
-  color: #fff;
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
+/* ── Visible label below icon ─────────────────────────────────────── */
+.label {
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
   white-space: nowrap;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  letter-spacing: 0.05em;
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.82);
-}
-
-.checkinBtn:hover .tooltip,
-.checkinBtn:focus-visible .tooltip {
-  opacity: 1;
 }
 
 /* ── Spinner (loading state) ──────────────────────────────────────── */
@@ -90,52 +59,4 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
-}
-
-/* ── Feedback messages ───────────────────────────────────────────── */
-.feedbackArea {
-  position: absolute;
-  bottom: calc(100% + 68px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  width: max-content;
-  max-width: min(280px, 90vw);
-  pointer-events: none;
-}
-
-.success {
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-}
-
-.successBadge {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid gold;
-  flex-shrink: 0;
-}
-
-.error {
-  background: rgba(255, 235, 235, 0.96);
-  color: #800;
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  text-align: center;
 }
