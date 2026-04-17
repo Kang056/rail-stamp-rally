@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import BottomSheet from './BottomSheet';
+import { useIsMobile } from '@/lib/useIsMobile';
 import styles from './AuthButton.module.css';
 
 export type { User };
@@ -30,6 +31,7 @@ export default function AuthButton({
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const isMobile = useIsMobile();
   const onAuthChangeRef = useRef(onAuthChange);
   onAuthChangeRef.current = onAuthChange;
 
@@ -95,65 +97,67 @@ export default function AuthButton({
     <>
       {iconButton}
 
-      <BottomSheet
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        title="帳號"
-      >
-        <div className={styles.accountContent}>
-          {/* Avatar */}
-          {user?.user_metadata?.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.user_metadata.avatar_url}
-              alt={user.user_metadata?.full_name ?? '使用者頭像'}
-              className={styles.accountAvatar}
-            />
-          ) : (
-            <div className={styles.accountAvatarPlaceholder}>
-              <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-              </svg>
-            </div>
-          )}
+      {isMobile && (
+        <BottomSheet
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          title="帳號"
+        >
+          <div className={styles.accountContent}>
+            {/* Avatar */}
+            {user?.user_metadata?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.user_metadata.avatar_url}
+                alt={user.user_metadata?.full_name ?? '使用者頭像'}
+                className={styles.accountAvatar}
+              />
+            ) : (
+              <div className={styles.accountAvatarPlaceholder}>
+                <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#999" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+            )}
 
-          {/* Name */}
-          <span className={styles.accountName}>
-            {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? '模擬使用者' : '使用者')}
-          </span>
+            {/* Name */}
+            <span className={styles.accountName}>
+              {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? '模擬使用者' : '使用者')}
+            </span>
 
-          {/* Badge collection button */}
-          {showLoggedIn && onOpenBadgeCollection && (
-            <button
-              className={styles.accountActionBtn}
-              onClick={() => {
-                setDrawerOpen(false);
-                onOpenBadgeCollection();
-              }}
-            >
-              紀念章收集冊
-            </button>
-          )}
+            {/* Badge collection button */}
+            {showLoggedIn && onOpenBadgeCollection && (
+              <button
+                className={styles.accountActionBtn}
+                onClick={() => {
+                  setDrawerOpen(false);
+                  onOpenBadgeCollection();
+                }}
+              >
+                紀念章收集冊
+              </button>
+            )}
 
-          {/* Mock login button */}
-          {onMockLoginToggle && (
-            <button
-              className={`${styles.accountActionBtn} ${mockLogin ? styles.accountActionBtnActive : ''}`}
-              onClick={onMockLoginToggle}
-            >
-              {mockLogin ? '關閉模擬登入' : '模擬登入'}
-            </button>
-          )}
+            {/* Mock login button */}
+            {onMockLoginToggle && (
+              <button
+                className={`${styles.accountActionBtn} ${mockLogin ? styles.accountActionBtnActive : ''}`}
+                onClick={onMockLoginToggle}
+              >
+                {mockLogin ? '關閉模擬登入' : '模擬登入'}
+              </button>
+            )}
 
-          {/* Logout */}
-          {user && (
-            <button onClick={handleSignOut} className={styles.logoutBtn}>
-              登出
-            </button>
-          )}
-        </div>
-      </BottomSheet>
+            {/* Logout */}
+            {user && (
+              <button onClick={handleSignOut} className={styles.logoutBtn}>
+                登出
+              </button>
+            )}
+          </div>
+        </BottomSheet>
+      )}
     </>
   );
 }

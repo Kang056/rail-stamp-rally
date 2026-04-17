@@ -138,6 +138,13 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   showStationsRef.current = showStations;
   onMapReadyRef.current = onMapReady;
 
+  // Stable callback that always routes to the latest onFeatureClick via ref.
+  // This prevents stale closures inside Leaflet click handlers which are created
+  // once and never replaced (they capture their function argument at creation time).
+  const stableOnFeatureClick = useRef<(props: RailwayFeatureProperties) => void>(
+    (props) => onFeatureClickRef.current(props),
+  ).current;
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
     initializingRef.current = true;
@@ -256,7 +263,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
       // ── Render GeoJSON features ──────────────────────────────────────────
       if (geojsonRef.current) {
-        renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current, collectedStationIdsRef.current, newBadgeStationIdRef.current, visibleSystemsRef.current, showStationsRef.current);
+        renderGeoJSON(L, map, geojsonRef.current, stableOnFeatureClick, showAllBadgesRef.current, collectedStationIdsRef.current, newBadgeStationIdRef.current, visibleSystemsRef.current, showStationsRef.current);
       }
 
       // Expose flyTo for external control (focus button)
@@ -299,7 +306,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
 
     import('leaflet').then((L) => {
       if (mapRef.current) {
-        renderGeoJSON(L, mapRef.current, geojson, onFeatureClick, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems, showStations);
+        renderGeoJSON(L, mapRef.current, geojson, stableOnFeatureClick, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems, showStations);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

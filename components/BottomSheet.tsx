@@ -45,7 +45,12 @@ export default function BottomSheet({
           <Drawer.Title className={styles.visuallyHidden}>
             {title}
           </Drawer.Title>
-          <div className={styles.handle} aria-hidden="true" />
+          <div className={styles.header}>
+            <div className={styles.handle} aria-hidden="true" />
+            <Drawer.Close asChild>
+              <button className={styles.closeBtn} aria-label="關閉">✕</button>
+            </Drawer.Close>
+          </div>
           <div className={styles.inner}>
             {children}
           </div>

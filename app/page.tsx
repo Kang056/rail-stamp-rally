@@ -23,6 +23,7 @@ import TrainScheduleDialog from '@/components/TrainScheduleDialog';
 import type { StationPickTarget } from '@/components/TrainScheduleDialog';
 import ToastContainer from '@/components/Toast';
 import type { ToastItem } from '@/components/Toast';
+import { useIsMobile } from '@/lib/useIsMobile';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
@@ -42,6 +43,8 @@ type DesktopPanelType = 'details' | 'account' | 'progress' | 'train' | null;
 // Page component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HomePage() {
+  const isMobile = useIsMobile();
+
   const [selectedFeature, setSelectedFeature] =
     useState<RailwayFeatureProperties | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -302,6 +305,10 @@ export default function HomePage() {
   // Train schedule station pick callback — dialog stays open
   const handleRequestPick = useCallback((target: StationPickTarget) => {
     setStationPickTarget(target);
+    // Clear any stale picked station when starting a new pick
+    if (target !== null) {
+      setPickedStation(null);
+    }
   }, []);
 
   // Desktop panel toggle
@@ -579,7 +586,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Mobile: Badge Collection Progress BottomSheet ── */}
-      <div className={styles.mobileOnly}>
+      {isMobile && (
         <BottomSheet
           open={mobileProgressOpen}
           onOpenChange={setMobileProgressOpen}
@@ -597,10 +604,10 @@ export default function HomePage() {
             onToggleStations={handleToggleStations}
           />
         </BottomSheet>
-      </div>
+      )}
 
       {/* ── Mobile: Station/Line Details BottomSheet ── */}
-      <div className={styles.mobileOnly}>
+      {isMobile && (
         <BottomSheet
           open={sheetOpen}
           onOpenChange={(open) => { if (!open) handleClose(); }}
@@ -614,10 +621,10 @@ export default function HomePage() {
             collectedCountsBySystem={collectedCountsBySystem}
           />
         </BottomSheet>
-      </div>
+      )}
 
       {/* ── Mobile: Train Schedule Query BottomSheet ── */}
-      <div className={styles.mobileOnly}>
+      {isMobile && (
         <BottomSheet
           open={trainDialogOpen}
           onOpenChange={(open) => {
@@ -639,7 +646,7 @@ export default function HomePage() {
             onDismissToast={dismissToast}
           />
         </BottomSheet>
-      </div>
+      )}
 
       {/* ── Toast notifications ── */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

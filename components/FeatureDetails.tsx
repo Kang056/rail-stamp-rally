@@ -157,14 +157,6 @@ export default function FeatureDetails({ feature, onClose, collectedBadges, stat
   if (!feature) {
     return (
       <div className={styles.empty}>
-        <button
-          className={styles.closeButton}
-          onClick={onClose}
-          aria-label="Close details panel"
-        >
-          ✕
-        </button>
-
         <div className={styles.stationToggleRow}>
           <div className={styles.stationToggleLabel}>車站顯示</div>
           {onToggleStations && (
@@ -225,14 +217,6 @@ export default function FeatureDetails({ feature, onClose, collectedBadges, stat
 
   return (
     <div className={styles.wrapper}>
-      <button
-        className={styles.closeButton}
-        onClick={onClose}
-        aria-label="Close details panel"
-      >
-        ✕
-      </button>
-
       {feature.feature_type === 'station' ? (
         <StationDetail station={feature as StationProperties} collectedBadges={collectedBadges} />
       ) : (

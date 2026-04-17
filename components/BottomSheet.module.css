@@ -19,7 +19,7 @@
   z-index: 1201;
   display: flex;
   flex-direction: column;
-  padding: 0.5rem 0 0;
+  padding: 0;
 }
 
 .handle {
@@ -27,8 +27,40 @@
   height: 4px;
   background: #ccc;
   border-radius: 2px;
-  margin: 0 auto;
   flex-shrink: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0.5rem 0.75rem 0.25rem;
+  flex-shrink: 0;
+}
+
+.closeBtn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(128, 128, 128, 0.1);
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #666;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+  padding: 0;
+}
+
+.closeBtn:hover {
+  background: rgba(128, 128, 128, 0.22);
 }
 
 .inner {
