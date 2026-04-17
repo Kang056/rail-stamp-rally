@@ -33,6 +33,8 @@ interface MapProps {
   visibleSystems?: Set<string>;
   /** Whether station points should be rendered */
   showStations?: boolean;
+  /** Called once when the map is ready, exposes flyTo(lat, lng, zoom) for external control */
+  onMapReady?: (flyTo: (lat: number, lng: number, zoom: number) => void) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -112,7 +114,7 @@ function addFilmstripPolyline(
 // ─────────────────────────────────────────────────────────────────────────────
 // MapComponent
 // ─────────────────────────────────────────────────────────────────────────────
-export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId, visibleSystems, showStations = true }: MapProps) {
+export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId, visibleSystems, showStations = true, onMapReady }: MapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
@@ -126,6 +128,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   const newBadgeStationIdRef = useRef(newBadgeStationId);
   const visibleSystemsRef = useRef(visibleSystems);
   const showStationsRef = useRef(showStations);
+  const onMapReadyRef = useRef(onMapReady);
   geojsonRef.current = geojson;
   onFeatureClickRef.current = onFeatureClick;
   showAllBadgesRef.current = showAllBadges;
@@ -133,6 +136,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   newBadgeStationIdRef.current = newBadgeStationId;
   visibleSystemsRef.current = visibleSystems;
   showStationsRef.current = showStations;
+  onMapReadyRef.current = onMapReady;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current || initializingRef.current) return;
@@ -253,6 +257,13 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
       // ── Render GeoJSON features ──────────────────────────────────────────
       if (geojsonRef.current) {
         renderGeoJSON(L, map, geojsonRef.current, onFeatureClickRef.current, showAllBadgesRef.current, collectedStationIdsRef.current, newBadgeStationIdRef.current, visibleSystemsRef.current, showStationsRef.current);
+      }
+
+      // Expose flyTo for external control (focus button)
+      if (onMapReadyRef.current) {
+        onMapReadyRef.current((lat: number, lng: number, zoom: number) => {
+          map.flyTo([lat, lng], zoom, { duration: 1.2 });
+        });
       }
 
       // Attach cleanup hooks

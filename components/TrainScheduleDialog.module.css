@@ -1,0 +1,168 @@
+/* TrainScheduleDialog.module.css */
+
+.container {
+  padding: 0.5rem 0;
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  color: #111;
+}
+
+.fieldGroup {
+  margin-bottom: 0.75rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 0.25rem;
+}
+
+.pickerBtn {
+  width: 100%;
+  padding: 10px 12px;
+  background: #f7f7f7;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.pickerBtn:hover {
+  border-color: #aaa;
+}
+
+.pickerBtnActive {
+  border-color: #20b8d4;
+  background: rgba(32, 184, 212, 0.06);
+  color: #20b8d4;
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: #20b8d4; }
+  50% { border-color: rgba(32, 184, 212, 0.3); }
+}
+
+.pickingHint {
+  background: rgba(32, 184, 212, 0.1);
+  color: #0e7490;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.timeRow {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.timeRow .fieldGroup {
+  flex: 1;
+}
+
+.timeInput {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #333;
+  background: #f7f7f7;
+}
+
+.timeInput:focus {
+  outline: none;
+  border-color: #20b8d4;
+}
+
+.queryBtn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 0.5rem;
+  background: #20b8d4;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.queryBtn:hover:not(:disabled) {
+  background: #1aa3bd;
+}
+
+.queryBtn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 0.75rem;
+  background: rgba(255, 235, 235, 0.96);
+  color: #800;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.noResult {
+  margin-top: 0.75rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.88rem;
+}
+
+/* ── Results table ───────────────────────────────────────────────── */
+.resultList {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+}
+
+.resultHeader {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 0.8fr;
+  gap: 4px;
+  padding: 6px 8px;
+  background: #f0f0f0;
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+  color: #555;
+}
+
+.resultRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 0.8fr;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  align-items: center;
+}
+
+.resultRow:last-child {
+  border-bottom: none;
+}
+
+.trainNo {
+  font-weight: 600;
+  color: #20b8d4;
+}
+
+.delayed {
+  color: #c0392b;
+  font-weight: 600;
+}

@@ -4,12 +4,12 @@
  * app/page.tsx — Rail Stamp Rally main page
  *
  * Layout strategy:
- *   Mobile  (<768 px): Full-screen map + react-spring-bottom-sheet for details
+ *   Mobile  (<768 px): Full-screen map + shared BottomSheet for details/dialogs
  *   Desktop (≥768 px): Map fills the right side; fixed <aside> sidebar on the left
  */
 
 import dynamic from 'next/dynamic';
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { RailwayFeatureProperties, CollectedBadge } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import FeatureDetails, { SYSTEM_LABELS } from '@/components/FeatureDetails';
@@ -17,10 +17,12 @@ import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
 import { getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
 import AuthButton from '@/components/AuthButton';
+import BottomSheet from '@/components/BottomSheet';
+import TrainScheduleDialog from '@/components/TrainScheduleDialog';
+import type { StationPickTarget } from '@/components/TrainScheduleDialog';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
-// Map must be dynamically imported with ssr:false (Leaflet is browser-only).
 const LeafletMap = dynamic(() => import('@/components/Map'), {
   ssr: false,
   loading: () => (
@@ -29,8 +31,6 @@ const LeafletMap = dynamic(() => import('@/components/Map'), {
     </div>
   ),
 });
-
-import { Drawer } from 'vaul';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page component
@@ -50,6 +50,18 @@ export default function HomePage() {
     () => new Set(Object.keys(SYSTEM_LABELS))
   );
 
+  // Train schedule dialog state
+  const [trainDialogOpen, setTrainDialogOpen] = useState(false);
+  const [stationPickTarget, setStationPickTarget] = useState<StationPickTarget>(null);
+  const [pickedStation, setPickedStation] = useState<{ stationId: string; stationName: string } | null>(null);
+
+  // Map ref for flyTo (focus button)
+  const mapFlyToRef = useRef<((lat: number, lng: number, zoom: number) => void) | null>(null);
+
+  const handleMapReady = useCallback((flyTo: (lat: number, lng: number, zoom: number) => void) => {
+    mapFlyToRef.current = flyTo;
+  }, []);
+
   const handleToggleSystem = useCallback((system: string) => {
     setVisibleSystems((prev) => {
       const next = new Set(prev);
@@ -66,15 +78,24 @@ export default function HomePage() {
 
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
+    // If in station-picking mode for train schedule, capture the TRA station
+    if (stationPickTarget && props.feature_type === 'station' && (props as any).system_type === 'TRA') {
+      setPickedStation({
+        stationId: (props as any).station_id,
+        stationName: (props as any).station_name,
+      });
+      // Reopen train dialog
+      setTrainDialogOpen(true);
+      return;
+    }
+
     setSelectedFeature(props);
-    // Only open the bottom sheet on small viewports (mobile).
-    // On desktop (>=768px) details are shown in the left sidebar.
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setSheetOpen(true);
     } else {
       setSheetOpen(false);
     }
-  }, []);
+  }, [stationPickTarget]);
 
   const handleClose = useCallback(() => {
     setSheetOpen(false);
@@ -84,7 +105,6 @@ export default function HomePage() {
   const handleAuthChange = useCallback((u: User | null) => {
     setUser(u);
     if (!u) {
-      // Requirement 9: Logout resets map
       setCollectedStationIds(new Set());
       setCollectedBadgesMap(new Map());
       setNewBadgeStationId(null);
@@ -126,7 +146,6 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) return;
-    // Record/update user profile info in DB
     upsertProfile(user);
     getUserCollectedBadges(user.id).then((badges) => {
       const ids = new Set(badges.map((b) => b.station_id));
@@ -138,7 +157,6 @@ export default function HomePage() {
     });
   }, [user]);
 
-  // Compute station counts per system for progress bars
   const stationCountsBySystem = useMemo(() => {
     if (!geojson) return new Map<string, number>();
     const counts = new Map<string, number>();
@@ -166,7 +184,7 @@ export default function HomePage() {
     return counts;
   }, [geojson, collectedBadgesMap]);
 
-  // Generate mock badge data for "模擬登入" mode
+  // Mock login toggle
   const handleMockLoginToggle = useCallback(() => {
     setMockLogin((prev) => {
       const next = !prev;
@@ -189,11 +207,11 @@ export default function HomePage() {
         stationsBySystem.forEach((stations, sys) => {
           let ratio: number;
           if (sys === 'HSR') {
-            ratio = 1; // 100%
+            ratio = 1;
           } else if (sys === 'KLRT') {
-            ratio = 0; // 0%
+            ratio = 0;
           } else {
-            ratio = 0.5 + Math.random() * 0.3; // 50%-80%
+            ratio = 0.5 + Math.random() * 0.3;
           }
 
           const shuffled = [...stations].sort(() => Math.random() - 0.5);
@@ -219,6 +237,28 @@ export default function HomePage() {
     });
   }, [geojson]);
 
+  // Focus button: fly to user's current location
+  const handleFocus = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        mapFlyToRef.current?.(latitude, longitude, 16);
+      },
+      (err) => {
+        console.error('Geolocation error:', err.message);
+      },
+    );
+  }, []);
+
+  // Train schedule station pick callback
+  const handleRequestPick = useCallback((target: StationPickTarget) => {
+    setStationPickTarget(target);
+    if (target) {
+      setTrainDialogOpen(false); // close dialog so user can interact with map
+    }
+  }, []);
+
   const isLoggedIn = !!user || mockLogin;
 
   return (
@@ -226,7 +266,6 @@ export default function HomePage() {
       {/* ── Desktop sidebar (hidden on mobile via CSS) ── */}
       <aside className={styles.sidebar} aria-label="Feature details sidebar">
         <header className={styles.sidebarHeader}>
-          {/* <h1 className={styles.appTitle}>🚂 鐵道集旅</h1> */}
           <h1 className={styles.appSubtitle}>Rail Stamp Rally</h1>
         </header>
 
@@ -247,7 +286,6 @@ export default function HomePage() {
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
-        {/* Show a small loading / error indicator when fetching real data */}
         {loadingGeo && (
           <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 900 }} aria-live="polite">
             地圖資料載入中…
@@ -259,6 +297,13 @@ export default function HomePage() {
           </div>
         )}
 
+        {/* Station picking hint overlay */}
+        {stationPickTarget && (
+          <div className={styles.pickingOverlay}>
+            📍 請點擊地圖上的台鐵車站作為{stationPickTarget === 'origin' ? '起站' : '迄站'}
+          </div>
+        )}
+
         <LeafletMap
           geojson={geojson}
           onFeatureClick={handleFeatureClick}
@@ -267,29 +312,62 @@ export default function HomePage() {
           newBadgeStationId={newBadgeStationId}
           visibleSystems={visibleSystems}
           showStations={showStations}
+          onMapReady={handleMapReady}
         />
 
-        {/* ── Desktop bottom bar: 帳號 + 打卡 + 模擬登入 (no badge progress) ── */}
+        {/* ── Desktop bottom bar ── */}
         <div className={`${styles.bottomBar} ${styles.desktopOnly}`}>
-          <AuthButton onAuthChange={handleAuthChange} />
+          <AuthButton
+            onAuthChange={handleAuthChange}
+            mockLogin={mockLogin}
+            onMockLoginToggle={handleMockLoginToggle}
+            onOpenBadgeCollection={() => setMobileProgressOpen(true)}
+            isLoggedIn={isLoggedIn}
+          />
           <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} />
           <button
-            className={`${styles.iconBtn} ${mockLogin ? styles.iconBtnActive : ''}`}
-            onClick={handleMockLoginToggle}
-            aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
+            className={styles.iconBtn}
+            onClick={handleFocus}
+            aria-label="定位至目前位置"
           >
-            <span className={styles.iconTooltip}>模擬登入</span>
+            <span className={styles.iconTooltip}>定位</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 2h6" />
-              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v4" />
+              <path d="M12 18v4" />
+              <path d="M2 12h4" />
+              <path d="M18 12h4" />
+              <circle cx="12" cy="12" r="8" />
+            </svg>
+          </button>
+          <button
+            className={styles.iconBtn}
+            onClick={() => setTrainDialogOpen(true)}
+            aria-label="台鐵班次查詢"
+          >
+            <span className={styles.iconTooltip}>班次查詢</span>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="4" y="3" width="16" height="18" rx="2" />
+              <path d="M12 7v5l3 3" />
+              <path d="M8 21h8" />
+              <path d="M12 21v2" />
             </svg>
           </button>
         </div>
 
-        {/* ── Mobile toolbar (icon-only bottom nav with tooltips) ── */}
+        {/* ── Mobile toolbar: 帳號 → 打卡 → Focus → 班次查詢 ── */}
         <nav className={styles.mobileToolbar} aria-label="主要功能列">
           <div className={styles.toolbarItem}>
-            <AuthButton onAuthChange={handleAuthChange} />
+            <AuthButton
+              onAuthChange={handleAuthChange}
+              mockLogin={mockLogin}
+              onMockLoginToggle={handleMockLoginToggle}
+              onOpenBadgeCollection={() => {
+                setSheetOpen(false);
+                setMobileProgressOpen(true);
+              }}
+              isLoggedIn={isLoggedIn}
+            />
           </div>
 
           <div className={`${styles.toolbarItem} ${!isLoggedIn ? styles.toolbarItemHidden : ''}`}>
@@ -297,100 +375,88 @@ export default function HomePage() {
           </div>
 
           <button
-            className={`${styles.toolbarItem} ${!isLoggedIn ? styles.toolbarItemHidden : ''}`}
-            onClick={() => {
-              setSheetOpen(false);
-              setMobileProgressOpen(true);
-            }}
-            aria-label="開啟車站紀念章收集進度"
-            disabled={!isLoggedIn}
+            className={styles.toolbarItem}
+            onClick={handleFocus}
+            aria-label="定位至目前位置"
           >
-            <span className={styles.toolbarTooltip}>收集進度</span>
+            <span className={styles.toolbarTooltip}>定位</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-              <path d="M4 22h16" />
-              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+              <circle cx="12" cy="12" r="3" />
+              <path d="M12 2v4" />
+              <path d="M12 18v4" />
+              <path d="M2 12h4" />
+              <path d="M18 12h4" />
+              <circle cx="12" cy="12" r="8" />
             </svg>
           </button>
 
           <button
-            className={`${styles.toolbarItem} ${mockLogin ? styles.toolbarItemActive : ''}`}
-            onClick={handleMockLoginToggle}
-            aria-label={mockLogin ? '關閉模擬登入' : '開啟模擬登入'}
+            className={styles.toolbarItem}
+            onClick={() => setTrainDialogOpen(true)}
+            aria-label="台鐵班次查詢"
           >
-            <span className={styles.toolbarTooltip}>模擬登入</span>
+            <span className={styles.toolbarTooltip}>班次查詢</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 2h6" />
-              <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2" />
+              <rect x="4" y="3" width="16" height="18" rx="2" />
+              <path d="M12 7v5l3 3" />
+              <path d="M8 21h8" />
+              <path d="M12 21v2" />
             </svg>
           </button>
         </nav>
       </section>
 
-      {/* ── Mobile: 收集進度 Drawer ── */}
+      {/* ── Mobile: Badge Collection Progress BottomSheet ── */}
       <div className={styles.mobileOnly}>
-        <Drawer.Root
+        <BottomSheet
           open={mobileProgressOpen}
-          onOpenChange={(open) => {
-            setMobileProgressOpen(open);
-          }}
-          modal={false}
+          onOpenChange={setMobileProgressOpen}
+          title="車站紀念章收集進度"
         >
-          <Drawer.Portal>
-            <Drawer.Overlay className={styles.drawerOverlay} />
-            <Drawer.Content className={styles.drawerContent}>
-              <Drawer.Title className={styles.visuallyHidden}>
-                車站紀念章收集進度
-              </Drawer.Title>
-              <div className={styles.sheetHandle} aria-hidden="true" />
-              <div className={styles.drawerInner}>
-                <FeatureDetails
-                  feature={null}
-                  onClose={() => setMobileProgressOpen(false)}
-                  collectedBadges={collectedBadgesMap}
-                  stationCountsBySystem={stationCountsBySystem}
-                  collectedCountsBySystem={collectedCountsBySystem}
-                  visibleSystems={visibleSystems}
-                  onToggleSystem={handleToggleSystem}
-                  showStations={showStations}
-                  onToggleStations={handleToggleStations}
-                />
-              </div>
-            </Drawer.Content>
-          </Drawer.Portal>
-        </Drawer.Root>
+          <FeatureDetails
+            feature={null}
+            onClose={() => setMobileProgressOpen(false)}
+            collectedBadges={collectedBadgesMap}
+            stationCountsBySystem={stationCountsBySystem}
+            collectedCountsBySystem={collectedCountsBySystem}
+            visibleSystems={visibleSystems}
+            onToggleSystem={handleToggleSystem}
+            showStations={showStations}
+            onToggleStations={handleToggleStations}
+          />
+        </BottomSheet>
       </div>
 
-      {/* ── Mobile: 車站/路線詳情 Drawer ── */}
+      {/* ── Mobile: Station/Line Details BottomSheet ── */}
       <div className={styles.mobileOnly}>
-        <Drawer.Root
+        <BottomSheet
           open={sheetOpen}
           onOpenChange={(open) => { if (!open) handleClose(); }}
-          modal={false}
+          title="車站 / 路線詳情"
         >
-          <Drawer.Portal>
-            <Drawer.Overlay className={styles.drawerOverlay} />
-            <Drawer.Content className={styles.drawerContent}>
-              <Drawer.Title className={styles.visuallyHidden}>
-                車站 / 路線詳情
-              </Drawer.Title>
-              <div className={styles.sheetHandle} aria-hidden="true" />
-              <div className={styles.drawerInner}>
-                <FeatureDetails
-                  feature={selectedFeature}
-                  onClose={handleClose}
-                  collectedBadges={collectedBadgesMap}
-                  stationCountsBySystem={stationCountsBySystem}
-                  collectedCountsBySystem={collectedCountsBySystem}
-                />
-              </div>
-            </Drawer.Content>
-          </Drawer.Portal>
-        </Drawer.Root>
+          <FeatureDetails
+            feature={selectedFeature}
+            onClose={handleClose}
+            collectedBadges={collectedBadgesMap}
+            stationCountsBySystem={stationCountsBySystem}
+            collectedCountsBySystem={collectedCountsBySystem}
+          />
+        </BottomSheet>
       </div>
+
+      {/* ── Train Schedule Query BottomSheet (both mobile & desktop) ── */}
+      <BottomSheet
+        open={trainDialogOpen}
+        onOpenChange={setTrainDialogOpen}
+        title="台鐵班次查詢"
+      >
+        <TrainScheduleDialog
+          pickedStation={pickedStation}
+          pickTarget={stationPickTarget}
+          onRequestPick={handleRequestPick}
+          onClose={() => setTrainDialogOpen(false)}
+        />
+      </BottomSheet>
     </main>
   );
 }

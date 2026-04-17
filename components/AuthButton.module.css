@@ -1,72 +1,6 @@
 /* AuthButton.module.css */
 
-/* ── Sign-in icon button (before login) ──────────────────────────── */
-.signInBtn {
-  position: relative;
-  background: transparent;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  outline: none;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.signInBtn:hover {
-  opacity: 0.75;
-}
-
-.signInBtn:active {
-  opacity: 0.5;
-}
-
-.signInBtn:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-/* ── Tooltip (shared for both sign-in and avatar buttons) ────────── */
-.tooltip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.82);
-  color: #fff;
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  letter-spacing: 0.05em;
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.82);
-}
-
-.signInBtn:hover .tooltip,
-.signInBtn:focus-visible .tooltip,
-.avatarBtn:hover .tooltip,
-.avatarBtn:focus-visible .tooltip {
-  opacity: 1;
-}
-
-/* ── Avatar button (after login) ────────────────────────────────── */
+/* ── Avatar/Account icon button (unified for both states) ─────────── */
 .avatarBtn {
   position: relative;
   background: transparent;
@@ -96,44 +30,43 @@
   border-radius: 4px;
 }
 
-/* ── Vaul Drawer overlay ─────────────────────────────────────────── */
-.drawerOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 1200;
+/* Blue icon when logged in */
+.avatarBtnActive {
+  color: #20b8d4;
 }
 
-/* ── Vaul Drawer content panel ───────────────────────────────────── */
-.drawerContent {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  color: #111111;
-  border-radius: 16px 16px 0 0;
-  max-height: 85vh;
-  z-index: 1201;
-  display: flex;
-  flex-direction: column;
-  padding: 0.5rem 0 0;
+/* ── Tooltip ──────────────────────────────────────────────────────── */
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  letter-spacing: 0.05em;
 }
 
-/* ── Drag handle ─────────────────────────────────────────────────── */
-.sheetHandle {
-  width: 36px;
-  height: 4px;
-  background: #ccc;
-  border-radius: 2px;
-  margin: 0 auto;
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(0, 0, 0, 0.82);
 }
 
-/* ── Drawer scrollable inner area ────────────────────────────────── */
-.drawerInner {
-  flex: 1;
-  overflow-y: auto;
-  padding: 1rem 1.5rem 2rem;
+.avatarBtn:hover .tooltip,
+.avatarBtn:focus-visible .tooltip {
+  opacity: 1;
 }
 
 /* ── Account content layout ──────────────────────────────────────── */
@@ -154,6 +87,18 @@
   border: 3px solid rgba(0, 0, 0, 0.08);
 }
 
+/* ── Avatar placeholder (mock login / no avatar) ─────────────────── */
+.accountAvatarPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(0, 0, 0, 0.08);
+}
+
 /* ── Display name ────────────────────────────────────────────────── */
 .accountName {
   font-size: 1rem;
@@ -165,9 +110,8 @@
   max-width: 240px;
 }
 
-/* ── Logout button ───────────────────────────────────────────────── */
-.logoutBtn {
-  margin-top: 0.5rem;
+/* ── Account action text buttons (badge collection, mock login) ──── */
+.accountActionBtn {
   width: 100%;
   max-width: 200px;
   padding: 10px 20px;
@@ -182,20 +126,35 @@
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.logoutBtn:hover {
+.accountActionBtn:hover {
   background: rgba(0, 0, 0, 0.05);
   border-color: #bbb;
 }
 
-/* ── Visually hidden (for screen readers) ───────────────────────── */
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+.accountActionBtnActive {
+  background: rgba(32, 184, 212, 0.1);
+  border-color: #20b8d4;
+  color: #20b8d4;
+}
+
+/* ── Logout button ───────────────────────────────────────────────── */
+.logoutBtn {
+  margin-top: 0.25rem;
+  width: 100%;
+  max-width: 200px;
+  padding: 10px 20px;
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #c0392b;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.logoutBtn:hover {
+  background: rgba(192, 57, 43, 0.06);
+  border-color: #c0392b;
 }
