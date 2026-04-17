@@ -1,0 +1,61 @@
+{
+  "failed": 0,
+  "skipped": 0,
+  "passed": 7,
+  "total": 7,
+  "screenshots_zip": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots.zip",
+  "routes_with_screenshots": [
+    {
+      "route": "home-debug-logs",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\home-debug-logs.json"
+    },
+    {
+      "route": "home-debug",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\home-debug.html"
+    },
+    {
+      "route": "home-debug",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\home-debug.png"
+    },
+    {
+      "route": "home",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\home.png"
+    },
+    {
+      "route": "index",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\index.png"
+    },
+    {
+      "route": "map-after-zoom",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\map-after-zoom.png"
+    },
+    {
+      "route": "map-before-zoom",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\map-before-zoom.png"
+    },
+    {
+      "route": "map-metrics",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\map-metrics.json"
+    },
+    {
+      "route": "map-metrics",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\map-metrics.png"
+    },
+    {
+      "route": "pan-after-1",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\pan-after-1.png"
+    },
+    {
+      "route": "pan-after-zoom",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\pan-after-zoom.png"
+    },
+    {
+      "route": "pan-zoom-before",
+      "path": "C:\\Users\\howard.kang\\testCode\\rail-stamp-rally\\playwright-screenshots\\pan-zoom-before.png"
+    }
+  ],
+  "overall_test_exit_code": 0,
+  "timestamp": "2026-04-17T12:34:06.0733722+08:00",
+  "failing_tests": [],
+  "html_report": null
+}

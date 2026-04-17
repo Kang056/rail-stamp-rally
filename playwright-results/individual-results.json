@@ -1,0 +1,37 @@
+[
+  {
+    "file": "tests/checkin.spec.ts",
+    "exit": 0,
+    "screenshots": []
+  },
+  {
+    "file": "tests/home.debug.spec.js",
+    "exit": 0,
+    "screenshots": []
+  },
+  {
+    "file": "tests/home.spec.js",
+    "exit": 0,
+    "screenshots": []
+  },
+  {
+    "file": "tests/map.interaction.spec.js",
+    "exit": 0,
+    "screenshots": []
+  },
+  {
+    "file": "tests/map.metrics.spec.js",
+    "exit": 0,
+    "screenshots": []
+  },
+  {
+    "file": "tests/map.panning.spec.js",
+    "exit": 0,
+    "screenshots": []
+  },
+  {
+    "file": "tests/screenshot-all.spec.js",
+    "exit": 0,
+    "screenshots": []
+  }
+]

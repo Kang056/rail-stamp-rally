@@ -1,0 +1,15 @@
+[
+  {
+    "id": "def-002",
+    "title": "Check-in API tests skipped (missing env vars)",
+    "test_name": "tests/checkin.spec.ts",
+    "failing_expectation": "Badge check-in tests require SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and TEST_USER_ID to be set",
+    "evidence_files": [
+      "playwright-e2e.log",
+      "playwright-e2e-summary.json"
+    ],
+    "evidence_snippet": "Skipping API checkin test: Missing required env vars. Required: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY, TEST_USER_ID",
+    "suggested_owner": "backend",
+    "notes": "These tests were intentionally skipped due to missing integration credentials. To enable, provide the required env vars or use mocked endpoints."
+  }
+]

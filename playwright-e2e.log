@@ -1,0 +1,129 @@
+??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Playwright JSON run exit code: 0
+Failed to parse results.json: Conversion from JSON failed with error: Additional text encountered after finished reading JSON content: S. Path '', line 2, position 0.
+[1A[2K[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+HTML reporter run exit code: 0
+Cleaned results.json written
+Extracted JSON block and wrote to playwright-results\results.json
+Running: npx playwright test -c playwright.config.e2e.js
+
+[1A[2K[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+??injected env (5) from .env.local // tip: ??override existing { override: true }
+??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Skipping API checkin test: Missing required env vars.
+Required: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY, TEST_USER_ID
+Playwright exit code: 0
+playwright-results\results.json not found
+--- Running tests\checkin.spec.ts ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+--- Running tests\home.debug.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+--- Running tests\home.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+--- Running tests\map.interaction.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+--- Running tests\map.metrics.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+--- Running tests\map.panning.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+--- Running tests\screenshot-all.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+Individual test run complete: total=7 passed=0 failed=7
+--- Running tests/checkin.spec.ts ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+  -  1 tests\checkin.spec.ts:24:5 ??Badge check-in flow (geolocation) ??skeleton
+
+  1 skipped
+--- Running tests/home.debug.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+  ?? 1 tests\home.debug.spec.js:5:1 ??collect console and network logs and take screenshots (4.1s)
+
+  1 passed (12.5s)
+--- Running tests/home.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+PAGE_CONTENT_LENGTH: 28378
+  ?? 1 tests\home.spec.js:3:1 ??home page loads and screenshot (2.6s)
+
+  1 passed (11.5s)
+--- Running tests/map.interaction.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+TILES_BEFORE_COUNT: [33m18[39m
+BAD_BEFORE: [33mfalse[39m
+TILES_AFTER_COUNT: [33m24[39m
+BAD_AFTER: [33mfalse[39m
+  ?? 1 tests\map.interaction.spec.js:5:1 ??map tiles load and zoom interaction (3.6s)
+
+  1 passed (13.0s)
+--- Running tests/map.metrics.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+METRICS_WRITTEN
+  ?? 1 tests\map.metrics.spec.js:5:1 ??collect map layout metrics (1.2s)
+
+  1 passed (10.6s)
+--- Running tests/map.panning.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+TILES_INITIAL: [33m18[39m
+TILES_AFTER_PAN1: [33m27[39m
+TILES_AFTER_ZOOM: [33m24[39m
+HAS_NAN: [33mfalse[39m
+  ?? 1 tests\map.panning.spec.js:11:1 ??pan and zoom without broken tiles (4.0s)
+
+  1 passed (14.3s)
+--- Running tests/screenshot-all.spec.js ---
+[WebServer] ??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+
+Running 1 test using 1 worker
+
+Navigating to http://localhost:3000/
+Saved C:\Users\howard.kang\testCode\rail-stamp-rally\playwright-screenshots\index.png
+  ?? 1 tests\screenshot-all.spec.js:5:1 ??capture all routes (1.9s)
+
+  1 passed (10.8s)
+Individual test run complete: total=7 passed=7 failed=0
