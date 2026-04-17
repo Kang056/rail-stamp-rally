@@ -62,7 +62,15 @@ async function queryTdxTrainSchedule(
 ): Promise<TrainResult[]> {
   // TDX v2 open API (no auth required for basic queries with rate limit)
   const baseUrl = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD';
-  const url = `${baseUrl}/${originId}/to/${destId}/${date}?$format=JSON`;
+  // Use numeric station codes for TDX OD API (e.g., 1110), strip prefixes like 'TRA-'
+  const sanitize = (id: string) => {
+    if (!id) return '';
+    const m = String(id).match(/(\d+)$/);
+    return m ? m[1] : id;
+  };
+  const originCode = sanitize(originId);
+  const destCode = sanitize(destId);
+  const url = `${baseUrl}/${originCode}/to/${destCode}/${date}?$top=30&$format=JSON`;
 
   try {
     const resp = await fetch(url);

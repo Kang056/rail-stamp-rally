@@ -337,6 +337,8 @@ export default function HomePage() {
 
   return (
     <main className={styles.main}>
+      {/* Toast notifications (top-center) */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       {/* ════════════════════════════════════════════════════════════
           Desktop: Vertical icon bar (Google Maps style, far left)
           ════════════════════════════════════════════════════════════ */}
@@ -648,8 +650,7 @@ export default function HomePage() {
         </BottomSheet>
       )}
 
-      {/* ── Toast notifications ── */}
-      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
     </main>
   );
 }

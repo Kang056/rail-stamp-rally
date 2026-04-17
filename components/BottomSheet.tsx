@@ -40,7 +40,7 @@ export default function BottomSheet({
       snapPoints={[...SNAP_POINTS]}
     >
       <Drawer.Portal>
-        <Drawer.Overlay className={styles.overlay} />
+        {modal && <Drawer.Overlay className={styles.overlay} />}
         <Drawer.Content className={styles.content}>
           <Drawer.Title className={styles.visuallyHidden}>
             {title}
