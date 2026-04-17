@@ -244,16 +244,18 @@ END;
 $$;
 
 -- ─────────────────────────────────────────────
--- 10. RPC: checkin(user_lon, user_lat, user_id)
+-- 10. RPC: checkin(user_lon, user_lat, p_user_id)
 --     GPS 打卡判定，使用 ST_DWithin 100m 比對
+--     SECURITY DEFINER：以函式擁有者身份執行，繞過 RLS 直接寫入徽章紀錄
 -- ─────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION checkin(
-  user_lon double precision,
-  user_lat double precision,
-  user_id  uuid
+  user_lon  double precision,
+  user_lat  double precision,
+  p_user_id uuid
 )
 RETURNS json
 LANGUAGE plpgsql
+SECURITY DEFINER
 AS $$
 DECLARE
   v_station_id       TEXT;
@@ -261,6 +263,7 @@ DECLARE
   v_badge_image_url  TEXT;
   v_inserted_id      UUID;
   v_already_unlocked BOOLEAN := false;
+  v_unlocked_at      TIMESTAMPTZ;
 BEGIN
   -- 尋找 100 公尺內最近的車站
   SELECT rs.station_id, rs.station_name,
@@ -280,14 +283,20 @@ BEGIN
 
   -- 嘗試寫入徽章紀錄；若已存在則不重複寫入
   INSERT INTO user_collected_badges (user_id, station_id, unlocked_at)
-    VALUES (user_id, v_station_id, NOW())
+    VALUES (p_user_id, v_station_id, NOW())
     ON CONFLICT (user_id, station_id) DO NOTHING
     RETURNING id INTO v_inserted_id;
 
   IF v_inserted_id IS NULL THEN
+    -- 已打卡：取出原始打卡時間
     v_already_unlocked := true;
+    SELECT ucb.unlocked_at INTO v_unlocked_at
+    FROM user_collected_badges ucb
+    WHERE ucb.user_id = p_user_id
+      AND ucb.station_id = v_station_id;
   ELSE
     v_already_unlocked := false;
+    v_unlocked_at := NOW();
   END IF;
 
   RETURN json_build_object(
@@ -295,13 +304,38 @@ BEGIN
     'already_unlocked', v_already_unlocked,
     'station_id',       v_station_id,
     'station_name',     v_station_name,
-    'badge_image_url',  v_badge_image_url
+    'badge_image_url',  v_badge_image_url,
+    'unlocked_at',      v_unlocked_at
   );
 END;
 $$;
 
 -- ─────────────────────────────────────────────
--- 11. Row Level Security (RLS)
+-- 11. RPC: get_user_badges(p_user_id)
+--     回傳使用者已收集的所有車站徽章
+-- ─────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION get_user_badges(p_user_id uuid)
+RETURNS json
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+AS $$
+  SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
+  FROM (
+    SELECT
+      ucb.station_id,
+      ucb.unlocked_at,
+      rs.station_name,
+      rs.badge_image_url
+    FROM user_collected_badges ucb
+    JOIN railway_stations rs ON rs.station_id = ucb.station_id
+    WHERE ucb.user_id = p_user_id
+    ORDER BY ucb.unlocked_at DESC
+  ) t;
+$$;
+
+-- ─────────────────────────────────────────────
+-- 12. Row Level Security (RLS)
 -- ─────────────────────────────────────────────
 
 -- railway_stations — 公開只讀
@@ -328,14 +362,15 @@ CREATE POLICY "Select own badges"
   USING (auth.uid()::uuid = user_id);
 
 -- ─────────────────────────────────────────────
--- 12. GRANTs — 授予 anon/authenticated 角色權限
+-- 13. GRANTs — 授予 anon/authenticated 角色權限
 -- ─────────────────────────────────────────────
 GRANT SELECT ON railway_stations       TO anon, authenticated;
 GRANT SELECT ON railway_lines          TO anon, authenticated;
 GRANT SELECT, INSERT ON user_collected_badges TO authenticated;
 
-GRANT EXECUTE ON FUNCTION public.get_all_railway_geojson()     TO anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.checkin(double precision, double precision, uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_all_railway_geojson()                              TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.checkin(double precision, double precision, uuid)       TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_badges(uuid)                                  TO authenticated;
 
 -- insert_stations_bulk / insert_lines_bulk 為 SECURITY DEFINER
 -- 僅由 service-role key (bypass RLS) 呼叫，無需額外 GRANT
