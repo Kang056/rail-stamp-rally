@@ -636,6 +636,7 @@ export default function HomePage() {
           open={sheetOpen}
           onOpenChange={(open) => { if (!open) handleClose(); }}
           title="車站 / 路線詳情"
+          defaultSnap={1}
         >
           <FeatureDetails
             feature={selectedFeature}
