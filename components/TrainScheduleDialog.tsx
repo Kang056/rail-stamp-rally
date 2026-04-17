@@ -4,13 +4,13 @@
  * TrainScheduleDialog.tsx — 台鐵班次查詢 Dialog
  *
  * Flow:
- * 1. User opens dialog → sees origin/destination fields + time range
- * 2. Tap origin field → enters "picking" mode → tap station on map → fills origin
- * 3. Tap destination field → enters "picking" mode → tap station on map → fills destination
- * 4. Set time range → tap query → calls TDX API
+ * 1. Dialog opens → auto-enters origin picking mode → "步驟1: 請選取起站"
+ * 2. User clicks TRA station on map → origin filled → auto-enters destination pick
+ * 3. "步驟2: 請選取迄站" → user clicks station → destination filled
+ * 4. "步驟3: 請選取時間範圍" → user sets time → query
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import styles from './TrainScheduleDialog.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,6 +34,8 @@ interface TrainResult {
 }
 
 interface TrainScheduleDialogProps {
+  /** Whether this dialog is currently open */
+  isOpen: boolean;
   /** Currently picked station from map (set by parent when user clicks a TRA station) */
   pickedStation: StationInfo | null;
   /** Which field is currently waiting for a map pick */
@@ -42,6 +44,10 @@ interface TrainScheduleDialogProps {
   onRequestPick: (target: StationPickTarget) => void;
   /** Called when dialog wants to close */
   onClose: () => void;
+  /** Toast callback: returns toast id for loading toasts */
+  onToast?: (message: string, type: 'success' | 'error' | 'info' | 'loading') => string;
+  /** Dismiss a loading toast by id */
+  onDismissToast?: (id: string) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -123,10 +129,13 @@ async function queryTdxTrainSchedule(
 // Component
 // ─────────────────────────────────────────────────────────────────────────────
 export default function TrainScheduleDialog({
+  isOpen,
   pickedStation,
   pickTarget,
   onRequestPick,
   onClose,
+  onToast,
+  onDismissToast,
 }: TrainScheduleDialogProps) {
   const [origin, setOrigin] = useState<StationInfo | null>(null);
   const [destination, setDestination] = useState<StationInfo | null>(null);
@@ -149,15 +158,32 @@ export default function TrainScheduleDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // When a station is picked from the map, assign to the correct field
+  // Step guidance: 1=select origin, 2=select destination, 3=set time
+  const currentStep = !origin ? 1 : !destination ? 2 : 3;
+
+  // Auto-enter origin picking mode when dialog opens
+  const hasAutoStarted = useRef(false);
+  useEffect(() => {
+    if (isOpen && !origin && !hasAutoStarted.current) {
+      hasAutoStarted.current = true;
+      onRequestPick('origin');
+    }
+    if (!isOpen) {
+      hasAutoStarted.current = false;
+    }
+  }, [isOpen, origin, onRequestPick]);
+
+  // When a station is picked from the map, assign to the correct field and auto-advance
   useEffect(() => {
     if (!pickedStation || !pickTarget) return;
     if (pickTarget === 'origin') {
       setOrigin(pickedStation);
+      // Auto-advance to destination picking
+      setTimeout(() => onRequestPick('destination'), 100);
     } else if (pickTarget === 'destination') {
       setDestination(pickedStation);
+      onRequestPick(null);
     }
-    onRequestPick(null); // clear picking mode
   }, [pickedStation, pickTarget, onRequestPick]);
 
   const handleQuery = useCallback(async () => {
@@ -165,6 +191,7 @@ export default function TrainScheduleDialog({
     setLoading(true);
     setError(null);
     setResults(null);
+    const loadingId = onToast?.('班次查詢中…', 'loading');
     try {
       const trains = await queryTdxTrainSchedule(
         origin.stationId,
@@ -174,28 +201,48 @@ export default function TrainScheduleDialog({
         timeTo,
       );
       setResults(trains);
+      if (loadingId) onDismissToast?.(loadingId);
+      onToast?.(`查詢完成，共 ${trains.length} 筆班次`, 'success');
     } catch (err: any) {
       setError(err?.message ?? '查詢失敗');
+      if (loadingId) onDismissToast?.(loadingId);
+      onToast?.(err?.message ?? '查詢失敗', 'error');
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, date, timeFrom, timeTo]);
+  }, [origin, destination, date, timeFrom, timeTo, onToast, onDismissToast]);
+
+  const stepMessages: Record<number, string> = {
+    1: '步驟 1：請選取起站 — 點擊下方「起站」欄位，再點選地圖上的台鐵車站',
+    2: '步驟 2：請選取迄站 — 點擊下方「迄站」欄位，再點選地圖上的台鐵車站',
+    3: '步驟 3：請設定時間範圍，然後按「查詢班次」',
+  };
 
   return (
     <div className={styles.container}>
       <h3 className={styles.title}>🚂 台鐵班次查詢</h3>
+
+      {/* Step guidance indicator */}
+      <div className={styles.stepIndicator}>
+        <div className={styles.stepDots}>
+          {[1, 2, 3].map((s) => (
+            <span
+              key={s}
+              className={`${styles.stepDot} ${s === currentStep ? styles.stepDotActive : ''} ${s < currentStep ? styles.stepDotDone : ''}`}
+            />
+          ))}
+        </div>
+        <p className={styles.stepMessage}>{stepMessages[currentStep]}</p>
+      </div>
 
       {/* Station picker fields */}
       <div className={styles.fieldGroup}>
         <label className={styles.label}>起站</label>
         <button
           className={`${styles.pickerBtn} ${pickTarget === 'origin' ? styles.pickerBtnActive : ''}`}
-          onClick={() => {
-            onRequestPick('origin');
-            onClose();
-          }}
+          onClick={() => onRequestPick('origin')}
         >
-          {origin ? origin.stationName : '👆 點擊後請在地圖上選取車站'}
+          {origin ? `🚉 ${origin.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
         </button>
       </div>
 
@@ -203,52 +250,44 @@ export default function TrainScheduleDialog({
         <label className={styles.label}>迄站</label>
         <button
           className={`${styles.pickerBtn} ${pickTarget === 'destination' ? styles.pickerBtnActive : ''}`}
-          onClick={() => {
-            onRequestPick('destination');
-            onClose();
-          }}
+          onClick={() => onRequestPick('destination')}
         >
-          {destination ? destination.stationName : '👆 點擊後請在地圖上選取車站'}
+          {destination ? `🚉 ${destination.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
         </button>
       </div>
 
-      {/* Picking mode hint */}
-      {pickTarget && (
-        <div className={styles.pickingHint}>
-          📍 請在地圖上點擊一個台鐵車站作為{pickTarget === 'origin' ? '起站' : '迄站'}
+      {/* Time range (visible at step 3) */}
+      <div className={`${styles.timeSection} ${currentStep >= 3 ? styles.timeSectionActive : ''}`}>
+        <div className={styles.timeRow}>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>開始時間</label>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={timeFrom}
+              onChange={(e) => setTimeFrom(e.target.value)}
+            />
+          </div>
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>結束時間</label>
+            <input
+              type="time"
+              className={styles.timeInput}
+              value={timeTo}
+              onChange={(e) => setTimeTo(e.target.value)}
+            />
+          </div>
         </div>
-      )}
 
-      {/* Time range */}
-      <div className={styles.timeRow}>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>開始時間</label>
-          <input
-            type="time"
-            className={styles.timeInput}
-            value={timeFrom}
-            onChange={(e) => setTimeFrom(e.target.value)}
-          />
-        </div>
-        <div className={styles.fieldGroup}>
-          <label className={styles.label}>結束時間</label>
-          <input
-            type="time"
-            className={styles.timeInput}
-            value={timeTo}
-            onChange={(e) => setTimeTo(e.target.value)}
-          />
-        </div>
+        {/* Query button */}
+        <button
+          className={styles.queryBtn}
+          onClick={handleQuery}
+          disabled={!origin || !destination || loading}
+        >
+          {loading ? '查詢中…' : '查詢班次'}
+        </button>
       </div>
-
-      {/* Query button */}
-      <button
-        className={styles.queryBtn}
-        onClick={handleQuery}
-        disabled={!origin || !destination || loading}
-      >
-        {loading ? '查詢中…' : '查詢班次'}
-      </button>
 
       {/* Error */}
       {error && <div className={styles.error}>{error}</div>}

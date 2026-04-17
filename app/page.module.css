@@ -27,123 +27,19 @@
   font-size: 1rem;
 }
 
-/* ── Desktop sidebar — hidden on mobile ─────────────────────────── */
-.sidebar {
-  display: none; /* hidden by default (mobile-first) */
+/* ── Desktop icon bar — hidden on mobile ────────────────────────── */
+.desktopIconBar {
+  display: none;
+}
+
+/* ── Desktop content panel — hidden on mobile ───────────────────── */
+.desktopPanel {
+  display: none;
 }
 
 /* ── Mobile bottom sheet wrapper ───────────────────────────────── */
 .mobileOnly {
   display: block;
-}
-
-/* ── App title in desktop sidebar ──────────────────────────────── */
-.appTitle {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: #ffffff;
-}
-
-.appSubtitle {
-  font-size: 0.8rem;
-  color: #aaa;
-  margin-top: 0.15rem;
-}
-
-.sidebarHeader {
-  padding: 1.25rem 1rem 0.75rem;
-  border-bottom: 1px solid #333;
-}
-
-.sidebarContent {
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* ── Icon button (shared transparent button style) ─────────────── */
-.iconBtn {
-  position: relative;
-  background: transparent;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  outline: none;
-  flex-shrink: 0;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.iconBtn:hover {
-  opacity: 0.75;
-}
-
-.iconBtn:active {
-  opacity: 0.5;
-}
-
-.iconBtn:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 3px;
-  border-radius: 4px;
-}
-
-.iconBtnActive {
-  color: #20b8d4;
-}
-
-/* ── Tooltip for icon buttons ────────────────────────────────────── */
-.iconTooltip {
-  position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.82);
-  color: #fff;
-  padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 600;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  letter-spacing: 0.05em;
-}
-
-.iconTooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.82);
-}
-
-.iconBtn:hover .iconTooltip,
-.iconBtn:focus-visible .iconTooltip {
-  opacity: 1;
-}
-
-/* ── Bottom action bar (desktop) ───────────────────────────────── */
-.bottomBar {
-  position: absolute;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  display: none;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 1rem;
-  pointer-events: none;
-}
-
-.bottomBar > * {
-  pointer-events: auto;
 }
 
 /* ── Mobile toolbar (icon-only bottom nav) ──────────────────────── */
@@ -223,68 +119,226 @@
   opacity: 1;
 }
 
-/* Utility: hidden on mobile, visible on desktop */
-.desktopOnly {
-  display: none;
-}
-
-/* ── Station picking hint overlay ─────────────────────────────── */
-.pickingOverlay {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  background: rgba(32, 184, 212, 0.92);
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  animation: picking-pulse 2s ease-in-out infinite;
-}
-
-@keyframes picking-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
 /* ══════════════════════════════════════════════════════════════════
-   Desktop breakpoint — show sidebar, hide mobile elements
+   Desktop breakpoint — Google Maps style layout
    ══════════════════════════════════════════════════════════════════ */
 @media (min-width: 768px) {
   .main {
     flex-direction: row;
   }
 
-  /* Left sidebar: fixed width, dark background */
-  .sidebar {
+  /* ── Desktop: Vertical icon bar (far left) ──────────────────── */
+  .desktopIconBar {
     display: flex;
     flex-direction: column;
-    width: 320px;
-    min-width: 320px;
-    max-width: 320px;
+    width: 52px;
+    min-width: 52px;
     height: 100%;
     background: #1a1a2e;
     border-right: 1px solid #2e2e4e;
-    position: relative;
     z-index: 10;
+    align-items: center;
+    padding-top: 12px;
     color: #f0f0f0;
   }
 
-  /* Hide bottom sheet on desktop */
+  .iconBarGroup {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .iconBarBtn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: 48px;
+    height: 48px;
+    background: transparent;
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.15s ease, color 0.15s ease;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .iconBarBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
+  .iconBarBtnActive {
+    background: rgba(32, 184, 212, 0.15);
+    color: #20b8d4;
+  }
+
+  .iconBarBtnLoggedIn {
+    color: #20b8d4;
+  }
+
+  .iconBarLabel {
+    font-size: 0.55rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  /* Wrapper for BadgeCheckin inside icon bar */
+  .iconBarBtnWrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+  }
+
+  .iconBarBtnWrap:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  /* ── Desktop: Content panel (right of icon bar) ─────────────── */
+  .desktopPanel {
+    display: flex;
+    flex-direction: column;
+    width: 360px;
+    min-width: 360px;
+    max-width: 360px;
+    height: 100%;
+    background: #ffffff;
+    border-right: 1px solid #e0e0e0;
+    position: relative;
+    z-index: 10;
+    color: #111;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+  }
+
+  .panelClose {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    background: rgba(128, 128, 128, 0.1);
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+    color: #666;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: background 0.15s ease;
+  }
+
+  .panelClose:hover {
+    background: rgba(128, 128, 128, 0.2);
+  }
+
+  .panelContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem;
+  }
+
+  /* ── Desktop: Account panel content ─────────────────────────── */
+  .desktopAccount {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 2rem 1rem 1rem;
+  }
+
+  .desktopAccountAvatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .desktopAccountAvatarPlaceholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .desktopAccountName {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    text-align: center;
+    word-break: break-word;
+    max-width: 240px;
+  }
+
+  .desktopAccountBtn {
+    width: 100%;
+    max-width: 200px;
+    padding: 10px 20px;
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+
+  .desktopAccountBtn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: #bbb;
+  }
+
+  .desktopAccountBtnActive {
+    background: rgba(32, 184, 212, 0.1);
+    border-color: #20b8d4;
+    color: #20b8d4;
+  }
+
+  .desktopAccountLogout {
+    margin-top: 0.25rem;
+    width: 100%;
+    max-width: 200px;
+    padding: 10px 20px;
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #c0392b;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+
+  .desktopAccountLogout:hover {
+    background: rgba(192, 57, 43, 0.06);
+    border-color: #c0392b;
+  }
+
+  /* ── Hide mobile elements on desktop ────────────────────────── */
   .mobileOnly {
     display: none;
   }
-  .desktopOnly {
-    display: flex;
-  }
+
   .mobileToolbar {
     display: none;
-  }
-  .bottomBar {
-    display: flex;
   }
 }

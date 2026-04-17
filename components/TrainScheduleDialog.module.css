@@ -7,8 +7,54 @@
 .title {
   font-size: 1.1rem;
   font-weight: 700;
-  margin: 0 0 1rem;
+  margin: 0 0 0.75rem;
   color: #111;
+}
+
+/* ── Step indicator ─────────────────────────────────────────────── */
+.stepIndicator {
+  margin-bottom: 1rem;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(32, 184, 212, 0.08), rgba(32, 184, 212, 0.04));
+  border-radius: 10px;
+  border: 1px solid rgba(32, 184, 212, 0.15);
+}
+
+.stepDots {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.stepDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ddd;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.stepDotActive {
+  background: #20b8d4;
+  transform: scale(1.3);
+  animation: dot-pulse 1.5s ease-in-out infinite;
+}
+
+.stepDotDone {
+  background: #4caf50;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.stepMessage {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #0e7490;
+  line-height: 1.4;
 }
 
 .fieldGroup {
@@ -52,15 +98,16 @@
   50% { border-color: rgba(32, 184, 212, 0.3); }
 }
 
-.pickingHint {
-  background: rgba(32, 184, 212, 0.1);
-  color: #0e7490;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  text-align: center;
+/* Time section: slightly dimmed until step 3 */
+.timeSection {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.timeSectionActive {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .timeRow {
