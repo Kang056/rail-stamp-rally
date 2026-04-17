@@ -56,6 +56,57 @@ interface TrainScheduleDialogProps {
 // ─────────────────────────────────────────────────────────────────────────────
 // TDX API helper
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Strip any prefix (e.g. 'TRA-') and return numeric station code only */
+const sanitize = (id: string) => {
+  if (!id) return '';
+  const m = String(id).match(/(\d+)$/);
+  return m ? m[1] : id;
+};
+
+/** Query TDX ODFare to get adult standard price (TicketType=1, FareClass=1) per train type code */
+async function queryTdxFare(
+  originId: string,
+  destId: string,
+): Promise<Map<number, number>> {
+  const originCode = sanitize(originId);
+  const destCode = sanitize(destId);
+  const url = `https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/ODFare/${originCode}/to/${destCode}?$format=JSON`;
+  const fareMap = new Map<number, number>(); // trainType → price
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return fareMap;
+    const data = await resp.json();
+    const items = data?.ODFares ?? [];
+    (Array.isArray(items) ? items : []).forEach((od: any) => {
+      const trainType = od?.TrainType as number;
+      const fares = od?.Fares ?? [];
+      // Find adult standard fare: TicketType=1 (adult), FareClass=1 (standard)
+      const adultFare = fares.find(
+        (f: any) => f.TicketType === 1 && f.FareClass === 1,
+      );
+      if (adultFare && typeof adultFare.Price === 'number') {
+        fareMap.set(trainType, adultFare.Price);
+      }
+    });
+  } catch {
+    // Fare is optional; don't block schedule results
+  }
+  return fareMap;
+}
+
+/** Map TDX TrainTypeCode to fare trainType category */
+function mapTrainTypeCodeToFareType(code: string): number {
+  // TDX TrainTypeCode → ODFare TrainType mapping
+  // 1=太魯閣, 2=普悠瑪, 3=自強, 4=莒光, 5=復興, 6=區間, 10=區間快, 11=普快
+  const c = parseInt(code, 10);
+  if (c === 1 || c === 2 || c === 3) return 1; // 自強級 → fare trainType 1
+  if (c === 4) return 2; // 莒光 → fare trainType 2
+  if (c === 5) return 3; // 復興 → fare trainType 3
+  if (c === 6 || c === 10 || c === 11) return 10; // 區間/區間快 → fare trainType 10
+  return 10; // fallback to 區間
+}
+
 async function queryTdxTrainSchedule(
   originId: string,
   destId: string,
@@ -63,26 +114,23 @@ async function queryTdxTrainSchedule(
   timeFrom: string,
   timeTo: string,
 ): Promise<TrainResult[]> {
-  // TDX v2 open API (no auth required for basic queries with rate limit)
-  const baseUrl = 'https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD';
-  // Use numeric station codes for TDX OD API (e.g., 1110), strip prefixes like 'TRA-'
-  const sanitize = (id: string) => {
-    if (!id) return '';
-    const m = String(id).match(/(\d+)$/);
-    return m ? m[1] : id;
-  };
   const originCode = sanitize(originId);
   const destCode = sanitize(destId);
-  const url = `${baseUrl}/${originCode}/to/${destCode}/${date}?$top=30&$format=JSON`;
+
+  // Fetch timetable and fare in parallel
+  const [timetableResp, fareMap] = await Promise.all([
+    fetch(
+      `https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD/${originCode}/to/${destCode}/${date}?$top=30&$format=JSON`,
+    ),
+    queryTdxFare(originId, destId),
+  ]);
+
+  if (!timetableResp.ok) {
+    throw new Error(`TDX API 回應錯誤: ${timetableResp.status}`);
+  }
 
   try {
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      throw new Error(`TDX API 回應錯誤: ${resp.status}`);
-    }
-    const data = await resp.json();
-
-    // Parse TDX response into our format
+    const data = await timetableResp.json();
     const trains: TrainResult[] = [];
     const items = data?.TrainTimetables ?? data?.DailyTrainTimetableList ?? data ?? [];
 
@@ -90,14 +138,12 @@ async function queryTdxTrainSchedule(
       const info = item?.TrainInfo ?? item;
       const trainNo = info?.TrainNo ?? '';
       const trainType = info?.TrainTypeName?.Zh_tw ?? info?.TrainType ?? '';
+      const trainTypeCode = info?.TrainTypeCode ?? '';
 
       const stops = item?.StopTimes ?? [];
-      const originStop = stops.find((s: any) =>
-        s.StationID === originId || s.StationName?.Zh_tw === originId
-      );
-      const destStop = stops.find((s: any) =>
-        s.StationID === destId || s.StationName?.Zh_tw === destId
-      );
+      // Match stops using sanitized numeric codes
+      const originStop = stops.find((s: any) => s.StationID === originCode);
+      const destStop = stops.find((s: any) => s.StationID === destCode);
 
       const depTime = originStop?.DepartureTime ?? originStop?.ArrivalTime ?? '';
       const arrTime = destStop?.ArrivalTime ?? destStop?.DepartureTime ?? '';
@@ -111,13 +157,20 @@ async function queryTdxTrainSchedule(
       if (depTime && arrTime) {
         const [dh, dm] = depTime.split(':').map(Number);
         const [ah, am] = arrTime.split(':').map(Number);
-        const diffMin = (ah * 60 + am) - (dh * 60 + dm);
+        let diffMin = (ah * 60 + am) - (dh * 60 + dm);
+        if (diffMin < 0) diffMin += 24 * 60; // handle overnight
         if (diffMin > 0) {
-          travelTime = `${Math.floor(diffMin / 60)}時${diffMin % 60}分`;
+          const h = Math.floor(diffMin / 60);
+          const m = diffMin % 60;
+          travelTime = h > 0 ? `${h}時${m}分` : `${m}分`;
         }
       }
 
       const delay = info?.DelayTime ?? item?.DelayTime;
+
+      // Look up fare by train type
+      const fareType = mapTrainTypeCodeToFareType(trainTypeCode);
+      const price = fareMap.get(fareType);
 
       trains.push({
         trainNo,
@@ -126,6 +179,7 @@ async function queryTdxTrainSchedule(
         arrivalTime: arrTime,
         travelTime,
         delayMinutes: typeof delay === 'number' ? delay : undefined,
+        price: typeof price === 'number' ? `$${price}` : undefined,
       });
     });
 
@@ -453,28 +507,38 @@ export default function TrainScheduleDialog({
 
       {results && results.length > 0 && (
         <div className={styles.resultList}>
-          <div className={styles.resultHeader}>
-            <span>車次</span>
-            <span>車種</span>
-            <span>出發</span>
-            <span>抵達</span>
-            <span>行駛</span>
-            <span>誤點</span>
-          </div>
           {results.map((train) => (
-            <div key={train.trainNo} className={styles.resultRow}>
-              <span className={styles.trainNo}>{train.trainNo}</span>
-              <span>{train.trainType}</span>
-              <span>{train.departureTime}</span>
-              <span>{train.arrivalTime}</span>
-              <span>{train.travelTime}</span>
-              <span className={train.delayMinutes ? styles.delayed : ''}>
-                {train.delayMinutes != null
-                  ? train.delayMinutes > 0
-                    ? `${train.delayMinutes}分`
-                    : '準點'
-                  : '-'}
-              </span>
+            <div key={train.trainNo} className={styles.resultCard}>
+              <div className={styles.cardHeader}>
+                <span className={styles.trainNo}>{train.trainNo}</span>
+                <span className={styles.trainType}>{train.trainType}</span>
+                {train.price && <span className={styles.trainPrice}>{train.price}</span>}
+              </div>
+              <div className={styles.cardBody}>
+                <div className={styles.cardTime}>
+                  <div className={styles.cardTimeItem}>
+                    <span className={styles.cardTimeLabel}>出發</span>
+                    <span className={styles.cardTimeValue}>{train.departureTime || '-'}</span>
+                  </div>
+                  <span className={styles.cardArrow}>→</span>
+                  <div className={styles.cardTimeItem}>
+                    <span className={styles.cardTimeLabel}>抵達</span>
+                    <span className={styles.cardTimeValue}>{train.arrivalTime || '-'}</span>
+                  </div>
+                </div>
+                <div className={styles.cardMeta}>
+                  <span className={styles.cardMetaItem}>
+                    🕐 {train.travelTime || '-'}
+                  </span>
+                  <span className={`${styles.cardMetaItem} ${train.delayMinutes ? styles.delayed : ''}`}>
+                    {train.delayMinutes != null
+                      ? train.delayMinutes > 0
+                        ? `⚠ 誤點 ${train.delayMinutes}分`
+                        : '✅ 準點'
+                      : ''}
+                  </span>
+                </div>
+              </div>
             </div>
           ))}
         </div>

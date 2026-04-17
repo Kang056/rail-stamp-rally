@@ -248,39 +248,102 @@
   font-size: 0.88rem;
 }
 
-/* ── Results table ───────────────────────────────────────────────── */
+/* ── Result cards ─────────────────────────────────────────────────── */
 .resultList {
   margin-top: 1rem;
-  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.resultHeader {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 0.8fr;
-  gap: 4px;
-  padding: 6px 8px;
-  background: #f0f0f0;
-  border-radius: 6px 6px 0 0;
-  font-weight: 600;
-  color: #555;
+.resultCard {
+  background: #f9f9fb;
+  border: 1px solid #e8e8ee;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: box-shadow 0.15s ease;
 }
 
-.resultRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 0.8fr;
-  gap: 4px;
-  padding: 8px;
-  border-bottom: 1px solid #eee;
+.resultCard:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cardHeader {
+  display: flex;
   align-items: center;
-}
-
-.resultRow:last-child {
-  border-bottom: none;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .trainNo {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.95rem;
   color: #20b8d4;
+}
+
+.trainType {
+  font-size: 0.78rem;
+  color: #555;
+  background: #eef8fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.trainPrice {
+  margin-left: auto;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2a7f3f;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cardTime {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cardTimeItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cardTimeLabel {
+  font-size: 0.68rem;
+  color: #999;
+  font-weight: 500;
+}
+
+.cardTimeValue {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #222;
+  letter-spacing: 0.02em;
+}
+
+.cardArrow {
+  font-size: 1rem;
+  color: #bbb;
+  margin-top: 10px;
+}
+
+.cardMeta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: #777;
+}
+
+.cardMetaItem {
+  white-space: nowrap;
 }
 
 .delayed {

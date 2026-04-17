@@ -8,8 +8,10 @@
   border: none;
   cursor: pointer;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 2px;
   padding: 4px;
   outline: none;
   flex-shrink: 0;
@@ -67,6 +69,16 @@
 .avatarBtn:hover .tooltip,
 .avatarBtn:focus-visible .tooltip {
   opacity: 1;
+}
+
+/* ── Visible label below icon (mobile toolbar) ────────────────────── */
+.avatarLabel {
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ── Account content layout ──────────────────────────────────────── */

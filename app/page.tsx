@@ -230,7 +230,8 @@ export default function HomePage() {
     if (!geojson) return [];
     return geojson.features
       .filter((f: any) => f.properties.feature_type === 'station' && f.properties.system_type === 'TRA')
-      .map((f: any) => ({ stationId: f.properties.station_id as string, stationName: f.properties.station_name as string }));
+      .map((f: any) => ({ stationId: f.properties.station_id as string, stationName: f.properties.station_name as string }))
+      .sort((a: { stationId: string }, b: { stationId: string }) => a.stationId.localeCompare(b.stationId, undefined, { numeric: true }));
   }, [geojson]);
 
   const collectedCountsBySystem = useMemo(() => {
@@ -581,7 +582,6 @@ export default function HomePage() {
             onClick={handleFocus}
             aria-label="定位至目前位置"
           >
-            <span className={styles.toolbarTooltip}>定位</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
               <path d="M12 2v4" />
@@ -590,6 +590,7 @@ export default function HomePage() {
               <path d="M18 12h4" />
               <circle cx="12" cy="12" r="8" />
             </svg>
+            <span className={styles.toolbarLabel}>定位</span>
           </button>
 
           <button
@@ -597,13 +598,13 @@ export default function HomePage() {
             onClick={() => setTrainDialogOpen(true)}
             aria-label="台鐵班次查詢"
           >
-            <span className={styles.toolbarTooltip}>班次查詢</span>
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="3" width="16" height="18" rx="2" />
               <path d="M12 7v5l3 3" />
               <path d="M8 21h8" />
               <path d="M12 21v2" />
             </svg>
+            <span className={styles.toolbarLabel}>班次</span>
           </button>
         </nav>
       </section>
