@@ -22,6 +22,7 @@ interface BottomSheetProps {
   children: React.ReactNode;
   /** Whether to block interaction with content behind the sheet */
   modal?: boolean;
+  defaultSnap?: number;
 }
 
 const SNAP_POINTS = [0.5, 1] as const;
@@ -33,15 +34,16 @@ export default function BottomSheet({
   title,
   children,
   modal = false,
+  defaultSnap,
 }: BottomSheetProps) {
   const [activeSnap, setActiveSnap] = useState<number | string | null>(DEFAULT_SNAP);
 
   // Reset to default (half-screen) snap point every time the sheet opens
   useEffect(() => {
     if (open) {
-      setActiveSnap(DEFAULT_SNAP);
+      setActiveSnap(defaultSnap ?? DEFAULT_SNAP);
     }
-  }, [open]);
+  }, [open, defaultSnap]);
 
   return (
     <Drawer.Root

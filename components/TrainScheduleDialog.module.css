@@ -98,6 +98,80 @@
   50% { border-color: rgba(32, 184, 212, 0.3); }
 }
 
+/* ── Searchable station select (mobile) ─────────────────────────── */
+.stationSelect {
+  position: relative;
+}
+
+.stationSelectInput {
+  width: 100%;
+  padding: 10px 32px 10px 12px;
+  background: #f7f7f7;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #333;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.stationSelectInput:focus {
+  border-color: #20b8d4;
+}
+
+.stationSelectInput::placeholder {
+  color: #aaa;
+}
+
+.stationSelectClear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+
+.stationSelectClear:hover {
+  color: #555;
+}
+
+.stationDropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 2px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  list-style: none;
+  padding: 4px 0;
+}
+
+.stationDropdownItem {
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.stationDropdownItem:hover {
+  background: rgba(32, 184, 212, 0.1);
+  color: #0e7490;
+}
+
 /* Time section: slightly dimmed until step 3 */
 .timeSection {
   opacity: 0.4;

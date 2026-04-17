@@ -10,7 +10,8 @@
  * 4. "步驟3: 請選取時間範圍" → user sets time → query
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useIsMobile } from '@/lib/useIsMobile';
 import styles from './TrainScheduleDialog.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,6 +49,8 @@ interface TrainScheduleDialogProps {
   onToast?: (message: string, type: 'success' | 'error' | 'info' | 'loading') => string;
   /** Dismiss a loading toast by id */
   onDismissToast?: (id: string) => void;
+  /** TRA station list for mobile dropdown selection */
+  traStations?: StationInfo[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -144,9 +147,31 @@ export default function TrainScheduleDialog({
   onClose,
   onToast,
   onDismissToast,
+  traStations,
 }: TrainScheduleDialogProps) {
+  const isMobile = useIsMobile();
+  const useDropdown = isMobile && traStations && traStations.length > 0;
+
   const [origin, setOrigin] = useState<StationInfo | null>(null);
   const [destination, setDestination] = useState<StationInfo | null>(null);
+
+  // Searchable dropdown state (mobile only)
+  const [originQuery, setOriginQuery] = useState('');
+  const [destQuery, setDestQuery] = useState('');
+  const [originDropdownOpen, setOriginDropdownOpen] = useState(false);
+  const [destDropdownOpen, setDestDropdownOpen] = useState(false);
+
+  const filteredOriginStations = useMemo(() => {
+    if (!traStations || !originQuery) return traStations ?? [];
+    const q = originQuery.toLowerCase();
+    return traStations.filter((s) => s.stationName.toLowerCase().includes(q));
+  }, [traStations, originQuery]);
+
+  const filteredDestStations = useMemo(() => {
+    if (!traStations || !destQuery) return traStations ?? [];
+    const q = destQuery.toLowerCase();
+    return traStations.filter((s) => s.stationName.toLowerCase().includes(q));
+  }, [traStations, destQuery]);
 
   // Default time range: now to +3 hours
   const now = new Date();
@@ -169,9 +194,10 @@ export default function TrainScheduleDialog({
   // Step guidance: 1=select origin, 2=select destination, 3=set time
   const currentStep = !origin ? 1 : !destination ? 2 : 3;
 
-  // Auto-enter origin picking mode when dialog opens
+  // Auto-enter origin picking mode when dialog opens (desktop only — mobile uses dropdown)
   const hasAutoStarted = useRef(false);
   useEffect(() => {
+    if (useDropdown) return;
     if (isOpen && !origin && !hasAutoStarted.current) {
       hasAutoStarted.current = true;
       onRequestPick('origin');
@@ -179,7 +205,7 @@ export default function TrainScheduleDialog({
     if (!isOpen) {
       hasAutoStarted.current = false;
     }
-  }, [isOpen, origin, onRequestPick]);
+  }, [isOpen, origin, onRequestPick, useDropdown]);
 
   // When a station is picked from the map, assign to the correct field and auto-advance
   useEffect(() => {
@@ -220,11 +246,17 @@ export default function TrainScheduleDialog({
     }
   }, [origin, destination, date, timeFrom, timeTo, onToast, onDismissToast]);
 
-  const stepMessages: Record<number, string> = {
-    1: '步驟 1：請選取起站 — 點擊下方「起站」欄位，再點選地圖上的台鐵車站',
-    2: '步驟 2：請選取迄站 — 點擊下方「迄站」欄位，再點選地圖上的台鐵車站',
-    3: '步驟 3：請設定時間範圍，然後按「查詢班次」',
-  };
+  const stepMessages: Record<number, string> = useDropdown
+    ? {
+        1: '步驟 1：請從下拉選單選取起站',
+        2: '步驟 2：請從下拉選單選取迄站',
+        3: '步驟 3：請設定時間範圍，然後按「查詢班次」',
+      }
+    : {
+        1: '步驟 1：請選取起站 — 點擊下方「起站」欄位，再點選地圖上的台鐵車站',
+        2: '步驟 2：請選取迄站 — 點擊下方「迄站」欄位，再點選地圖上的台鐵車站',
+        3: '步驟 3：請設定時間範圍，然後按「查詢班次」',
+      };
 
   return (
     <div className={styles.container}>
@@ -246,22 +278,136 @@ export default function TrainScheduleDialog({
       {/* Station picker fields */}
       <div className={styles.fieldGroup}>
         <label className={styles.label}>起站</label>
-        <button
-          className={`${styles.pickerBtn} ${pickTarget === 'origin' ? styles.pickerBtnActive : ''}`}
-          onClick={() => onRequestPick('origin')}
-        >
-          {origin ? `🚉 ${origin.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
-        </button>
+        {useDropdown ? (
+          <div className={styles.stationSelect}>
+            <input
+              className={styles.stationSelectInput}
+              placeholder="輸入站名搜尋…"
+              value={origin ? origin.stationName : originQuery}
+              onChange={(e) => {
+                if (origin) setOrigin(null);
+                setOriginQuery(e.target.value);
+                setOriginDropdownOpen(true);
+              }}
+              onFocus={() => {
+                if (origin) {
+                  setOriginQuery(origin.stationName);
+                  setOrigin(null);
+                }
+                setOriginDropdownOpen(true);
+              }}
+              onBlur={() => {
+                setTimeout(() => setOriginDropdownOpen(false), 200);
+              }}
+            />
+            {(origin || originQuery) && (
+              <button
+                className={styles.stationSelectClear}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setOrigin(null);
+                  setOriginQuery('');
+                  setOriginDropdownOpen(false);
+                }}
+                aria-label="清除起站"
+              >
+                ✕
+              </button>
+            )}
+            {originDropdownOpen && filteredOriginStations.length > 0 && (
+              <ul className={styles.stationDropdown}>
+                {filteredOriginStations.map((s) => (
+                  <li
+                    key={s.stationId}
+                    className={styles.stationDropdownItem}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setOrigin(s);
+                      setOriginQuery('');
+                      setOriginDropdownOpen(false);
+                    }}
+                  >
+                    {s.stationName}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <button
+            className={`${styles.pickerBtn} ${pickTarget === 'origin' ? styles.pickerBtnActive : ''}`}
+            onClick={() => onRequestPick('origin')}
+          >
+            {origin ? `🚉 ${origin.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
+          </button>
+        )}
       </div>
 
       <div className={styles.fieldGroup}>
         <label className={styles.label}>迄站</label>
-        <button
-          className={`${styles.pickerBtn} ${pickTarget === 'destination' ? styles.pickerBtnActive : ''}`}
-          onClick={() => onRequestPick('destination')}
-        >
-          {destination ? `🚉 ${destination.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
-        </button>
+        {useDropdown ? (
+          <div className={styles.stationSelect}>
+            <input
+              className={styles.stationSelectInput}
+              placeholder="輸入站名搜尋…"
+              value={destination ? destination.stationName : destQuery}
+              onChange={(e) => {
+                if (destination) setDestination(null);
+                setDestQuery(e.target.value);
+                setDestDropdownOpen(true);
+              }}
+              onFocus={() => {
+                if (destination) {
+                  setDestQuery(destination.stationName);
+                  setDestination(null);
+                }
+                setDestDropdownOpen(true);
+              }}
+              onBlur={() => {
+                setTimeout(() => setDestDropdownOpen(false), 200);
+              }}
+            />
+            {(destination || destQuery) && (
+              <button
+                className={styles.stationSelectClear}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setDestination(null);
+                  setDestQuery('');
+                  setDestDropdownOpen(false);
+                }}
+                aria-label="清除迄站"
+              >
+                ✕
+              </button>
+            )}
+            {destDropdownOpen && filteredDestStations.length > 0 && (
+              <ul className={styles.stationDropdown}>
+                {filteredDestStations.map((s) => (
+                  <li
+                    key={s.stationId}
+                    className={styles.stationDropdownItem}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setDestination(s);
+                      setDestQuery('');
+                      setDestDropdownOpen(false);
+                    }}
+                  >
+                    {s.stationName}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : (
+          <button
+            className={`${styles.pickerBtn} ${pickTarget === 'destination' ? styles.pickerBtnActive : ''}`}
+            onClick={() => onRequestPick('destination')}
+          >
+            {destination ? `🚉 ${destination.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
+          </button>
+        )}
       </div>
 
       {/* Time range (visible at step 3) */}

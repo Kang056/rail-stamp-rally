@@ -226,6 +226,13 @@ export default function HomePage() {
     return counts;
   }, [geojson]);
 
+  const traStations = useMemo(() => {
+    if (!geojson) return [];
+    return geojson.features
+      .filter((f: any) => f.properties.feature_type === 'station' && f.properties.system_type === 'TRA')
+      .map((f: any) => ({ stationId: f.properties.station_id as string, stationName: f.properties.station_name as string }));
+  }, [geojson]);
+
   const collectedCountsBySystem = useMemo(() => {
     if (!geojson || collectedBadgesMap.size === 0) return new Map<string, number>();
     const counts = new Map<string, number>();
@@ -243,58 +250,56 @@ export default function HomePage() {
 
   // Mock login toggle
   const handleMockLoginToggle = useCallback(() => {
-    setMockLogin((prev) => {
-      const next = !prev;
-      if (next && geojson) {
-        showToast('模擬登入已開啟', 'info');
-        const ids = new Set<string>();
-        const badgesMap = new Map<string, { unlocked_at: string; badge_image_url: string | null }>();
+    const next = !mockLogin;
+    setMockLogin(next);
+    if (next && geojson) {
+      showToast('模擬登入已開啟', 'info');
+      const ids = new Set<string>();
+      const badgesMap = new Map<string, { unlocked_at: string; badge_image_url: string | null }>();
 
-        const stationsBySystem = new Map<string, Array<{ station_id: string; badge_image_url: string | null }>>();
-        geojson.features.forEach((f: any) => {
-          if (f.properties.feature_type === 'station') {
-            const sys = f.properties.system_type as string;
-            if (!stationsBySystem.has(sys)) stationsBySystem.set(sys, []);
-            stationsBySystem.get(sys)!.push({
-              station_id: f.properties.station_id,
-              badge_image_url: f.properties.badge_image_url ?? null,
-            });
-          }
-        });
+      const stationsBySystem = new Map<string, Array<{ station_id: string; badge_image_url: string | null }>>();
+      geojson.features.forEach((f: any) => {
+        if (f.properties.feature_type === 'station') {
+          const sys = f.properties.system_type as string;
+          if (!stationsBySystem.has(sys)) stationsBySystem.set(sys, []);
+          stationsBySystem.get(sys)!.push({
+            station_id: f.properties.station_id,
+            badge_image_url: f.properties.badge_image_url ?? null,
+          });
+        }
+      });
 
-        stationsBySystem.forEach((stations, sys) => {
-          let ratio: number;
-          if (sys === 'HSR') {
-            ratio = 1;
-          } else if (sys === 'KLRT') {
-            ratio = 0;
-          } else {
-            ratio = 0.5 + Math.random() * 0.3;
-          }
+      stationsBySystem.forEach((stations, sys) => {
+        let ratio: number;
+        if (sys === 'HSR') {
+          ratio = 1;
+        } else if (sys === 'KLRT') {
+          ratio = 0;
+        } else {
+          ratio = 0.5 + Math.random() * 0.3;
+        }
 
-          const shuffled = [...stations].sort(() => Math.random() - 0.5);
-          const count = Math.round(shuffled.length * ratio);
-          for (let i = 0; i < count; i++) {
-            const s = shuffled[i];
-            ids.add(s.station_id);
-            badgesMap.set(s.station_id, {
-              unlocked_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-              badge_image_url: s.badge_image_url,
-            });
-          }
-        });
+        const shuffled = [...stations].sort(() => Math.random() - 0.5);
+        const count = Math.round(shuffled.length * ratio);
+        for (let i = 0; i < count; i++) {
+          const s = shuffled[i];
+          ids.add(s.station_id);
+          badgesMap.set(s.station_id, {
+            unlocked_at: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+            badge_image_url: s.badge_image_url,
+          });
+        }
+      });
 
-        setCollectedStationIds(ids);
-        setCollectedBadgesMap(badgesMap);
-      } else {
-        showToast('模擬登入已關閉', 'info');
-        setCollectedStationIds(new Set());
-        setCollectedBadgesMap(new Map());
-        setShowAllBadges(false);
-      }
-      return next;
-    });
-  }, [geojson, showToast]);
+      setCollectedStationIds(ids);
+      setCollectedBadgesMap(badgesMap);
+    } else {
+      showToast('模擬登入已關閉', 'info');
+      setCollectedStationIds(new Set());
+      setCollectedBadgesMap(new Map());
+      setShowAllBadges(false);
+    }
+  }, [mockLogin, geojson, showToast]);
 
   // Focus button: fly to user's current location
   const handleFocus = useCallback(() => {
@@ -521,6 +526,7 @@ export default function HomePage() {
                 }}
                 onToast={showToast}
                 onDismissToast={dismissToast}
+                traStations={traStations}
               />
             </div>
           )}
@@ -649,6 +655,7 @@ export default function HomePage() {
             if (!open) setStationPickTarget(null);
           }}
           title="台鐵班次查詢"
+          defaultSnap={1}
         >
           <TrainScheduleDialog
             isOpen={trainDialogOpen}
@@ -661,6 +668,7 @@ export default function HomePage() {
             }}
             onToast={showToast}
             onDismissToast={dismissToast}
+            traStations={traStations}
           />
         </BottomSheet>
       )}

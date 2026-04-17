@@ -102,6 +102,7 @@ export default function AuthButton({
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           title="帳號"
+          defaultSnap={1}
         >
           <div className={styles.accountContent}>
             {/* Avatar */}
