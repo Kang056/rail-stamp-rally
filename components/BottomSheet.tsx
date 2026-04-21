@@ -36,9 +36,10 @@ export default function BottomSheet({
   modal = false,
   defaultSnap,
 }: BottomSheetProps) {
-  const [activeSnap, setActiveSnap] = useState<number | string | null>(DEFAULT_SNAP);
+  // Initialize with the configured default snap so the sheet opens at the intended height immediately
+  const [activeSnap, setActiveSnap] = useState<number | string | null>(defaultSnap ?? DEFAULT_SNAP);
 
-  // Reset to default (half-screen) snap point every time the sheet opens
+  // Reset to the configured default snap point every time the sheet re-opens
   useEffect(() => {
     if (open) {
       setActiveSnap(defaultSnap ?? DEFAULT_SNAP);

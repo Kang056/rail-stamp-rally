@@ -615,6 +615,7 @@ export default function HomePage() {
           open={mobileProgressOpen}
           onOpenChange={setMobileProgressOpen}
           title="車站紀念章收集進度"
+          defaultSnap={1}
         >
           <FeatureDetails
             feature={null}
