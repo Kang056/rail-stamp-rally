@@ -4,7 +4,7 @@
 .avatarBtn {
   position: relative;
   background: transparent;
-  color: #fff;
+  color: inherit;
   border: none;
   cursor: pointer;
   display: flex;
@@ -27,7 +27,7 @@
 }
 
 .avatarBtn:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid currentColor;
   outline-offset: 3px;
   border-radius: 4px;
 }

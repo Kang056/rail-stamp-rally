@@ -22,6 +22,8 @@ import AccountSettings from '@/components/AccountSettings';
 import BottomSheet from '@/components/BottomSheet';
 import TrainScheduleDialog from '@/components/TrainScheduleDialog';
 import type { StationPickTarget } from '@/components/TrainScheduleDialog';
+import DraggableDialog from '@/components/DraggableDialog';
+import LevelUpAnimation from '@/components/LevelUpAnimation';
 import ToastContainer from '@/components/Toast';
 import type { ToastItem } from '@/components/Toast';
 import CheckinRecordsPanel from '@/components/CheckinRecordsPanel';
@@ -46,7 +48,7 @@ const LeafletMap = dynamic(() => import('@/components/Map'), {
   loading: MapLoadingFallback,
 });
 // ── Types ─────────────────────────────────────────────────────────────────────
-type DesktopPanelType = 'details' | 'account' | 'progress' | 'train' | 'checkin' | null;
+type DesktopPanelType = 'details' | 'account' | 'progress' | 'checkin' | null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page component
@@ -120,13 +122,6 @@ export default function HomePage() {
   }, []);
   const [showStations, setShowStations] = useState<boolean>(true);
   const handleToggleStations = useCallback(() => setShowStations((v) => !v), []);
-
-  // Close train dialog when desktop panel switches away from 'train'
-  useEffect(() => {
-    if (!isMobile && desktopPanel !== 'train') {
-      setTrainDialogOpen(false);
-    }
-  }, [desktopPanel, isMobile]);
 
   // Clear station pick target whenever train dialog closes
   useEffect(() => {
@@ -299,6 +294,16 @@ export default function HomePage() {
   );
   const levelInfo: LevelInfo = useMemo(() => getLevelInfo(totalXp), [totalXp]);
 
+  // Level-up animation
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const prevLevelRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevLevelRef.current !== null && levelInfo.level > prevLevelRef.current) {
+      setShowLevelUp(true);
+    }
+    prevLevelRef.current = levelInfo.level;
+  }, [levelInfo.level]);
+
   // Mock login toggle
   const handleMockLoginToggle = useCallback(() => {
     const next = !mockLogin;
@@ -412,6 +417,12 @@ export default function HomePage() {
     <main className={styles.main}>
       {/* Toast notifications (top-center) */}
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+      {/* Level-up animation overlay */}
+      <LevelUpAnimation
+        level={levelInfo.level}
+        show={showLevelUp}
+        onDone={() => setShowLevelUp(false)}
+      />
       {/* ════════════════════════════════════════════════════════════
           Desktop: Vertical icon bar (Google Maps style, far left)
           ════════════════════════════════════════════════════════════ */}
@@ -450,15 +461,12 @@ export default function HomePage() {
             <span className={styles.iconBarLabel}>{t.map.locate}</span>
           </button>
 
-          {/* Train schedule */}
+          {/* Train schedule — opens draggable floating dialog, not the sidebar panel */}
           <button
-            className={`${styles.iconBarBtn} ${desktopPanel === 'train' ? styles.iconBarBtnActive : ''}`}
+            className={`${styles.iconBarBtn} ${trainDialogOpen ? styles.iconBarBtnActive : ''}`}
             onClick={() => {
-              toggleDesktopPanel('train');
-              if (desktopPanel !== 'train') {
-                setTrainDialogOpen(true);
-              } else {
-                setTrainDialogOpen(false);
+              setTrainDialogOpen(prev => !prev);
+              if (!trainDialogOpen) {
                 setStationPickTarget(null);
               }
             }}
@@ -479,10 +487,6 @@ export default function HomePage() {
             className={styles.panelClose}
             onClick={() => {
               setDesktopPanel(null);
-              if (desktopPanel === 'train') {
-                setTrainDialogOpen(false);
-                setStationPickTarget(null);
-              }
             }}
             aria-label={t.map.closePanel}
           >
@@ -602,27 +606,35 @@ export default function HomePage() {
               />
             </div>
           )}
-
-          {/* Train schedule */}
-          {desktopPanel === 'train' && (
-            <div className={styles.panelContent}>
-              <TrainScheduleDialog
-                isOpen={trainDialogOpen}
-                pickedStation={pickedStation}
-                pickTarget={stationPickTarget}
-                onRequestPick={handleRequestPick}
-                onClose={() => {
-                  setDesktopPanel(null);
-                  setTrainDialogOpen(false);
-                  setStationPickTarget(null);
-                }}
-                onToast={showToast}
-                onDismissToast={dismissToast}
-                traStations={traStations}
-              />
-            </div>
-          )}
         </aside>
+      )}
+
+      {/* ── Desktop: Draggable floating train schedule dialog ── */}
+      {!isMobile && (
+        <DraggableDialog
+          isOpen={trainDialogOpen}
+          title={t.map.trainSchedule}
+          onClose={() => {
+            setTrainDialogOpen(false);
+            setStationPickTarget(null);
+          }}
+          initialX={80}
+          initialY={80}
+        >
+          <TrainScheduleDialog
+            isOpen={trainDialogOpen}
+            pickedStation={pickedStation}
+            pickTarget={stationPickTarget}
+            onRequestPick={handleRequestPick}
+            onClose={() => {
+              setTrainDialogOpen(false);
+              setStationPickTarget(null);
+            }}
+            onToast={showToast}
+            onDismissToast={dismissToast}
+            traStations={traStations}
+          />
+        </DraggableDialog>
       )}
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
