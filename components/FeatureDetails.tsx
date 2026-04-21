@@ -1,6 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import type { RailwayFeatureProperties, StationProperties, LineProperties } from '@/lib/supabaseClient';
+import { fetchStationLiveBoard } from '@/lib/tdxApi';
+import type { LiveBoardItem } from '@/lib/tdxApi';
 import styles from './FeatureDetails.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,6 +43,81 @@ export const SYSTEM_LABELS: Record<string, string> = {
   NTMC: '新北捷運 (NTMC)',
   KLRT: '高雄輕軌 (KLRT)',
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StationLiveBoard — 即時電子看板（僅 TRA 車站）
+// ─────────────────────────────────────────────────────────────────────────────
+function StationLiveBoard({ stationId }: { stationId: string }) {
+  const [items, setItems] = useState<LiveBoardItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setItems(null);
+    fetchStationLiveBoard(stationId).then((data) => {
+      if (!cancelled) {
+        setItems(data);
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [stationId]);
+
+  const northbound = items?.filter((t) => t.Direction === 0) ?? [];
+  const southbound = items?.filter((t) => t.Direction === 1) ?? [];
+
+  return (
+    <div className={styles.liveBoardSection}>
+      <h3 className={styles.liveBoardTitle}>🚃 即時看板（前後 30 分鐘）</h3>
+      {loading && <p className={styles.liveBoardLoading}>載入中…</p>}
+      {!loading && items && items.length === 0 && (
+        <p className={styles.liveBoardEmpty}>目前無班次資料</p>
+      )}
+      {!loading && items && items.length > 0 && (
+        <div className={styles.liveBoardColumns}>
+          {/* Northbound */}
+          <div className={styles.liveBoardGroup}>
+            <div className={styles.liveBoardGroupTitle}>⬆ 北上</div>
+            {northbound.length === 0 ? (
+              <p className={styles.liveBoardEmpty}>無班次</p>
+            ) : (
+              northbound.map((t) => <LiveBoardRow key={t.TrainNo} item={t} />)
+            )}
+          </div>
+          {/* Southbound */}
+          <div className={styles.liveBoardGroup}>
+            <div className={styles.liveBoardGroupTitle}>⬇ 南下</div>
+            {southbound.length === 0 ? (
+              <p className={styles.liveBoardEmpty}>無班次</p>
+            ) : (
+              southbound.map((t) => <LiveBoardRow key={t.TrainNo} item={t} />)
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LiveBoardRow({ item }: { item: LiveBoardItem }) {
+  const time = item.ScheduledDepartureTime || item.ScheduledArrivalTime || '-';
+  const dest = item.DestinationStationName?.Zh_tw ?? '-';
+  const type = item.TrainTypeName?.Zh_tw ?? '';
+  const delayed = item.DelayTime > 0;
+
+  return (
+    <div className={styles.liveBoardRow}>
+      <span className={styles.liveBoardTrainNo}>{item.TrainNo}</span>
+      <span className={styles.liveBoardType}>{type}</span>
+      <span className={styles.liveBoardTime}>{time}</span>
+      <span className={styles.liveBoardDest}>→{dest}</span>
+      <span className={`${styles.liveBoardDelay} ${delayed ? styles.liveBoardDelayed : ''}`}>
+        {delayed ? `⚠${item.DelayTime}分` : '準點'}
+      </span>
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sub-components
@@ -113,6 +191,10 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
 
       {station.history_desc && (
         <p className={styles.historyDesc}>{station.history_desc}</p>
+      )}
+
+      {station.system_type === 'TRA' && (
+        <StationLiveBoard stationId={station.station_id} />
       )}
     </div>
   );

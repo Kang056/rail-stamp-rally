@@ -12,6 +12,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useIsMobile } from '@/lib/useIsMobile';
+import { fetchLiveTrainDelay } from '@/lib/tdxApi';
 import styles from './TrainScheduleDialog.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,12 +116,13 @@ async function queryTdxTrainSchedule(
   const originCode = sanitize(originId);
   const destCode = sanitize(destId);
 
-  // Fetch timetable and fare in parallel
-  const [timetableResp, fareMap] = await Promise.all([
+  // Fetch timetable, fare, and live delays in parallel
+  const [timetableResp, fareMap, delayMap] = await Promise.all([
     fetch(
       `https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD/${originCode}/to/${destCode}/${date}?$top=30&$format=JSON`,
     ),
     queryTdxFare(originId, destId),
+    fetchLiveTrainDelay(),
   ]);
 
   if (!timetableResp.ok) {
@@ -160,7 +162,7 @@ async function queryTdxTrainSchedule(
         }
       }
 
-      const delay = info?.DelayTime ?? item?.DelayTime;
+      const delayMin = delayMap.get(String(trainNo));
 
       // Look up fare by train type
       const fareType = mapTrainTypeCodeToFareType(trainTypeCode);
@@ -172,7 +174,7 @@ async function queryTdxTrainSchedule(
         departureTime: depTime,
         arrivalTime: arrTime,
         travelTime,
-        delayMinutes: typeof delay === 'number' ? delay : undefined,
+        delayMinutes: delayMin != null ? delayMin : undefined,
         price: typeof price === 'number' ? `$${price}` : undefined,
       });
     });
