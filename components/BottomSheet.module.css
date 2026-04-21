@@ -36,6 +36,7 @@
   justify-content: center;
   position: relative;
   padding: 0.5rem 0.75rem 0.25rem;
+  min-height: 44px;
   flex-shrink: 0;
 }
 
