@@ -245,7 +245,7 @@ $$;
 
 -- ─────────────────────────────────────────────
 -- 10. RPC: checkin(user_lon, user_lat, p_user_id)
---     GPS 打卡判定，使用 ST_DWithin 100m 比對
+--     GPS 打卡判定，使用 ST_DWithin 200m 比對
 --     SECURITY DEFINER：以函式擁有者身份執行，繞過 RLS 直接寫入徽章紀錄
 -- ─────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION checkin(
@@ -265,7 +265,7 @@ DECLARE
   v_already_unlocked BOOLEAN := false;
   v_unlocked_at      TIMESTAMPTZ;
 BEGIN
-  -- 尋找 100 公尺內最近的車站
+  -- 尋找 200 公尺內最近的車站
   SELECT rs.station_id, rs.station_name,
          COALESCE(rs.badge_image_url, rs.history_image_url)
   INTO v_station_id, v_station_name, v_badge_image_url
@@ -273,7 +273,7 @@ BEGIN
   WHERE ST_DWithin(
     rs.geom::geography,
     ST_SetSRID(ST_MakePoint(user_lon, user_lat), 4326)::geography,
-    100
+    200
   )
   LIMIT 1;
 

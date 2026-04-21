@@ -84,7 +84,7 @@ export default function AuthButton({
   /* ── Icon button (shared for both logged-in and logged-out) ── */
   const iconButton = (
     <button
-      className={`${styles.avatarBtn} ${showLoggedIn ? styles.avatarBtnActive : ''}`}
+      className={styles.avatarBtn}
       onClick={() => {
         if (user || isLoggedIn) {
           setDrawerOpen(true);

@@ -419,7 +419,7 @@ export default function HomePage() {
         <div className={styles.iconBarGroup}>
           {/* Account */}
           <button
-            className={`${styles.iconBarBtn} ${desktopPanel === 'account' ? styles.iconBarBtnActive : ''} ${isLoggedIn ? styles.iconBarBtnLoggedIn : ''}`}
+            className={`${styles.iconBarBtn} ${desktopPanel === 'account' ? styles.iconBarBtnActive : ''}`}
             onClick={() => {
               if (isLoggedIn) {
                 toggleDesktopPanel('account');
