@@ -50,8 +50,8 @@
   right: 0;
   z-index: 1100;
   height: 60px;
-  background: #1a1a2e;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--toolbar-bg);
+  border-top: 1px solid var(--toolbar-border);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -67,7 +67,7 @@
   gap: 2px;
   background: transparent;
   border: none;
-  color: #fff;
+  color: var(--text-primary);
   cursor: pointer;
   padding: 4px 0;
   min-width: 48px;
@@ -75,7 +75,7 @@
 }
 
 .toolbarItemActive {
-  color: #20b8d4;
+  color: var(--accent);
 }
 
 /* Hidden but preserves space */
@@ -144,12 +144,12 @@
     width: 52px;
     min-width: 52px;
     height: 100%;
-    background: #1a1a2e;
-    border-right: 1px solid #2e2e4e;
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
     z-index: 10;
     align-items: center;
     padding-top: 12px;
-    color: #f0f0f0;
+    color: var(--text-primary);
   }
 
   .iconBarGroup {
@@ -170,7 +170,7 @@
     height: 48px;
     background: transparent;
     border: none;
-    color: #ccc;
+    color: var(--text-secondary);
     cursor: pointer;
     border-radius: 8px;
     transition: background 0.15s ease, color 0.15s ease;
@@ -179,17 +179,17 @@
   }
 
   .iconBarBtn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: rgba(128, 128, 128, 0.1);
+    color: var(--text-primary);
   }
 
   .iconBarBtnActive {
-    background: rgba(32, 184, 212, 0.15);
-    color: #20b8d4;
+    background: var(--accent-light);
+    color: var(--accent);
   }
 
   .iconBarBtnLoggedIn {
-    color: #20b8d4;
+    color: var(--accent);
   }
 
   .iconBarLabel {
@@ -211,7 +211,7 @@
   }
 
   .iconBarBtnWrap:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(128, 128, 128, 0.1);
   }
 
   /* ── Desktop: Content panel (right of icon bar) ─────────────── */
@@ -222,12 +222,12 @@
     min-width: 360px;
     max-width: 360px;
     height: 100%;
-    background: #ffffff;
-    border-right: 1px solid #e0e0e0;
+    background: var(--bg-panel-content);
+    border-right: 1px solid var(--border-panel);
     position: relative;
     z-index: 10;
-    color: #111;
-    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+    color: var(--text-panel);
+    box-shadow: var(--shadow-panel);
   }
 
   .panelClose {
@@ -280,7 +280,7 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: #f0f0f0;
+    background: var(--bg-panel);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -290,7 +290,7 @@
   .desktopAccountName {
     font-size: 1rem;
     font-weight: 600;
-    color: #111;
+    color: var(--text-panel);
     text-align: center;
     word-break: break-word;
     max-width: 240px;
@@ -301,11 +301,11 @@
     max-width: 200px;
     padding: 10px 20px;
     background: none;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-panel);
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 600;
-    color: #333;
+    color: var(--text-panel);
     cursor: pointer;
     text-align: center;
     transition: background 0.12s ease, border-color 0.12s ease;
@@ -313,13 +313,13 @@
 
   .desktopAccountBtn:hover {
     background: rgba(0, 0, 0, 0.05);
-    border-color: #bbb;
+    border-color: var(--border-panel);
   }
 
   .desktopAccountBtnActive {
-    background: rgba(32, 184, 212, 0.1);
-    border-color: #20b8d4;
-    color: #20b8d4;
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .desktopAccountLogout {
@@ -328,7 +328,7 @@
     max-width: 200px;
     padding: 10px 20px;
     background: none;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-panel);
     border-radius: 8px;
     font-size: 0.9rem;
     font-weight: 600;

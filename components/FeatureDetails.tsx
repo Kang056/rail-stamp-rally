@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { RailwayFeatureProperties, StationProperties, LineProperties } from '@/lib/supabaseClient';
 import { fetchStationLiveBoard } from '@/lib/tdxApi';
 import type { LiveBoardItem } from '@/lib/tdxApi';
+import { useTranslation } from '@/lib/i18n';
 import styles from './FeatureDetails.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +51,7 @@ export const SYSTEM_LABELS: Record<string, string> = {
 function StationLiveBoard({ stationId }: { stationId: string }) {
   const [items, setItems] = useState<LiveBoardItem[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
@@ -64,34 +66,34 @@ function StationLiveBoard({ stationId }: { stationId: string }) {
     return () => { cancelled = true; };
   }, [stationId]);
 
-  const northbound = items?.filter((t) => t.Direction === 0) ?? [];
-  const southbound = items?.filter((t) => t.Direction === 1) ?? [];
+  const northbound = items?.filter((item) => item.Direction === 0) ?? [];
+  const southbound = items?.filter((item) => item.Direction === 1) ?? [];
 
   return (
     <div className={styles.liveBoardSection}>
-      <h3 className={styles.liveBoardTitle}>🚃 即時看板（前後 30 分鐘）</h3>
-      {loading && <p className={styles.liveBoardLoading}>載入中…</p>}
+      <h3 className={styles.liveBoardTitle}>{t.liveBoard.title}</h3>
+      {loading && <p className={styles.liveBoardLoading}>{t.liveBoard.loading}</p>}
       {!loading && items && items.length === 0 && (
-        <p className={styles.liveBoardEmpty}>目前無班次資料</p>
+        <p className={styles.liveBoardEmpty}>{t.liveBoard.noData}</p>
       )}
       {!loading && items && items.length > 0 && (
         <div className={styles.liveBoardColumns}>
           {/* Northbound */}
           <div className={styles.liveBoardGroup}>
-            <div className={styles.liveBoardGroupTitle}>⬆ 北上</div>
+            <div className={styles.liveBoardGroupTitle}>{t.liveBoard.northbound}</div>
             {northbound.length === 0 ? (
-              <p className={styles.liveBoardEmpty}>無班次</p>
+              <p className={styles.liveBoardEmpty}>{t.liveBoard.noTrain}</p>
             ) : (
-              northbound.map((t) => <LiveBoardRow key={t.TrainNo} item={t} />)
+              northbound.map((item) => <LiveBoardRow key={item.TrainNo} item={item} />)
             )}
           </div>
           {/* Southbound */}
           <div className={styles.liveBoardGroup}>
-            <div className={styles.liveBoardGroupTitle}>⬇ 南下</div>
+            <div className={styles.liveBoardGroupTitle}>{t.liveBoard.southbound}</div>
             {southbound.length === 0 ? (
-              <p className={styles.liveBoardEmpty}>無班次</p>
+              <p className={styles.liveBoardEmpty}>{t.liveBoard.noTrain}</p>
             ) : (
-              southbound.map((t) => <LiveBoardRow key={t.TrainNo} item={t} />)
+              southbound.map((item) => <LiveBoardRow key={item.TrainNo} item={item} />)
             )}
           </div>
         </div>
@@ -105,6 +107,7 @@ function LiveBoardRow({ item }: { item: LiveBoardItem }) {
   const dest = item.DestinationStationName?.Zh_tw ?? '-';
   const type = item.TrainTypeName?.Zh_tw ?? '';
   const delayed = item.DelayTime > 0;
+  const { t } = useTranslation();
 
   return (
     <div className={styles.liveBoardRow}>
@@ -113,7 +116,7 @@ function LiveBoardRow({ item }: { item: LiveBoardItem }) {
       <span className={styles.liveBoardTime}>{time}</span>
       <span className={styles.liveBoardDest}>→{dest}</span>
       <span className={`${styles.liveBoardDelay} ${delayed ? styles.liveBoardDelayed : ''}`}>
-        {delayed ? `⚠${item.DelayTime}分` : '準點'}
+        {delayed ? t.liveBoard.delayed(item.DelayTime) : t.liveBoard.onTime}
       </span>
     </div>
   );
@@ -124,6 +127,7 @@ function LiveBoardRow({ item }: { item: LiveBoardItem }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function StationDetail({ station, collectedBadges }: { station: StationProperties; collectedBadges?: Map<string, { unlocked_at: string; badge_image_url: string | null }> }) {
   const badge = collectedBadges?.get(station.station_id);
+  const { t } = useTranslation();
 
   return (
     <div className={styles.content}>
@@ -137,12 +141,12 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={badge.badge_image_url.startsWith('data:') || badge.badge_image_url.startsWith('http') ? badge.badge_image_url : `data:image/svg+xml;charset=utf-8,${encodeURIComponent(badge.badge_image_url)}`}
-                alt={`${station.station_name} 車站紀念章`}
+                alt={t.station.badgeAlt(station.station_name)}
                 className={styles.badgeImage}
               />
             )}
             <span className={styles.badgeDate}>
-              ✅ 已到訪 · {new Date(badge.unlocked_at).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {t.station.visited + ' · '}{new Date(badge.unlocked_at).toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
             <span className={styles.badgeTime}>
               🕐 {new Date(badge.unlocked_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
@@ -152,29 +156,29 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
           <div className={styles.badgeNotVisited}>
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={styles.badgePlaceholder}>
               <circle cx="32" cy="32" r="28" stroke="#666" strokeWidth="2" strokeDasharray="4 4" fill="none" />
-              <text x="32" y="36" textAnchor="middle" fill="#666" fontSize="12" fontFamily="sans-serif">尚未到訪</text>
+              <text x="32" y="36" textAnchor="middle" fill="#666" fontSize="12" fontFamily="sans-serif">{t.station.notVisited}</text>
             </svg>
           </div>
         )}
       </div>
 
       <dl className={styles.metaList}>
-        <dt>系統</dt>
+        <dt>{t.station.system}</dt>
         <dd>{SYSTEM_LABELS[station.system_type] ?? station.system_type}</dd>
 
         {station.line_id && (
           <>
-            <dt>路線代碼</dt>
+            <dt>{t.station.lineCode}</dt>
             <dd>{station.line_id}</dd>
           </>
         )}
 
-        <dt>車站代碼</dt>
+        <dt>{t.station.stationCode}</dt>
         <dd>{station.station_id}</dd>
 
         {station.established_year && (
           <>
-            <dt>啟用年份</dt>
+            <dt>{t.station.establishedYear}</dt>
             <dd>{station.established_year}</dd>
           </>
         )}
@@ -184,7 +188,7 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={station.history_image_url}
-          alt={`${station.station_name} 歷史照片`}
+          alt={t.station.historyPhotoAlt(station.station_name)}
           className={styles.historyImage}
         />
       )}
@@ -201,6 +205,7 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
 }
 
 function LineDetail({ line }: { line: LineProperties }) {
+  const { t } = useTranslation();
   return (
     <div className={styles.content}>
       <h2 className={styles.title}>
@@ -212,12 +217,12 @@ function LineDetail({ line }: { line: LineProperties }) {
         {line.line_name}
       </h2>
       <dl className={styles.metaList}>
-        <dt>系統</dt>
+        <dt>{t.station.system}</dt>
         <dd>{SYSTEM_LABELS[line.system_type] ?? line.system_type}</dd>
 
         {line.line_id && (
           <>
-            <dt>路線代碼</dt>
+            <dt>{t.station.lineCode}</dt>
             <dd>{line.line_id}</dd>
           </>
         )}
@@ -236,16 +241,17 @@ function LineDetail({ line }: { line: LineProperties }) {
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
 export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem, showStations, onToggleStations }: FeatureDetailsProps) {
+  const { t } = useTranslation();
   if (!feature) {
     return (
       <div className={styles.empty}>
         <div className={styles.stationToggleRow}>
-          <div className={styles.stationToggleLabel}>車站顯示</div>
+          <div className={styles.stationToggleLabel}>{t.progress.stationDisplay}</div>
           {onToggleStations && (
             <button
               className={`${styles.toggleSwitch} ${showStations ? styles.toggleOn : styles.toggleOff}`}
               onClick={onToggleStations}
-              aria-label={showStations ? '隱藏車站' : '顯示車站'}
+              aria-label={showStations ? t.progress.hideStation : t.progress.showStation}
               aria-pressed={!!showStations}
               type="button"
             >
@@ -256,7 +262,7 @@ export default function FeatureDetails({ feature, onClose, collectedBadges, stat
 
         {stationCountsBySystem && stationCountsBySystem.size > 0 && (
           <div className={styles.progressSection}>
-            <h3 className={styles.progressTitle}>🏅 車站紀念章收集進度</h3>
+            <h3 className={styles.progressTitle}>{t.progress.title}</h3>
             {Object.entries(SYSTEM_LABELS).map(([key, label]) => {
               const total = stationCountsBySystem?.get(key) ?? 0;
               const collected = collectedCountsBySystem?.get(key) ?? 0;
@@ -271,7 +277,7 @@ export default function FeatureDetails({ feature, onClose, collectedBadges, stat
                       <button
                         className={`${styles.toggleSwitch} ${isVisible ? styles.toggleOn : styles.toggleOff}`}
                         onClick={() => onToggleSystem(key)}
-                        aria-label={`${isVisible ? '隱藏' : '顯示'} ${label}`}
+                        aria-label={isVisible ? t.progress.hide(label) : t.progress.show(label)}
                         aria-pressed={isVisible}
                         type="button"
                       >

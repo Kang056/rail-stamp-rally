@@ -18,24 +18,30 @@ import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
 import { supabase, getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
 import AuthButton from '@/components/AuthButton';
+import AccountSettings from '@/components/AccountSettings';
 import BottomSheet from '@/components/BottomSheet';
 import TrainScheduleDialog from '@/components/TrainScheduleDialog';
 import type { StationPickTarget } from '@/components/TrainScheduleDialog';
 import ToastContainer from '@/components/Toast';
 import type { ToastItem } from '@/components/Toast';
 import { useIsMobile } from '@/lib/useIsMobile';
+import { useTranslation } from '@/lib/i18n';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
+function MapLoadingFallback() {
+  const { t } = useTranslation();
+  return (
+    <div className={styles.mapLoading} aria-live="polite">
+      {t.map.loading}
+    </div>
+  );
+}
+
 const LeafletMap = dynamic(() => import('@/components/Map'), {
   ssr: false,
-  loading: () => (
-    <div className={styles.mapLoading} aria-live="polite">
-      地圖載入中… / Loading map…
-    </div>
-  ),
+  loading: MapLoadingFallback,
 });
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 type DesktopPanelType = 'details' | 'account' | 'progress' | 'train' | null;
 
@@ -44,6 +50,7 @@ type DesktopPanelType = 'details' | 'account' | 'progress' | 'train' | null;
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HomePage() {
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const [selectedFeature, setSelectedFeature] =
     useState<RailwayFeatureProperties | null>(null);
@@ -130,11 +137,13 @@ export default function HomePage() {
           stationName: (props as any).station_name,
         });
         showToast(
-          `已選取 ${(props as any).station_name} 作為${stationPickTarget === 'origin' ? '起站' : '迄站'}`,
+          stationPickTarget === 'origin'
+            ? t.train.stationSelectedOrigin((props as any).station_name)
+            : t.train.stationSelectedDest((props as any).station_name),
           'success',
         );
       } else {
-        showToast('台鐵班次查詢僅支援台鐵車站，請選取台鐵車站', 'error');
+        showToast(t.train.traOnly, 'error');
       }
       return; // Don't open station details during picking
     }
@@ -145,7 +154,7 @@ export default function HomePage() {
     } else {
       setDesktopPanel('details');
     }
-  }, [stationPickTarget, trainDialogOpen, showToast]);
+  }, [stationPickTarget, trainDialogOpen, showToast, t]);
 
   const handleClose = useCallback(() => {
     setSheetOpen(false);
@@ -154,9 +163,9 @@ export default function HomePage() {
 
   const handleAuthChange = useCallback((u: User | null) => {
     if (u && !prevUserRef.current) {
-      showToast('登入成功', 'success');
+      showToast(t.auth.signInSuccess, 'success');
     } else if (!u && prevUserRef.current) {
-      showToast('登出成功', 'success');
+      showToast(t.auth.signOutSuccess, 'success');
     }
     prevUserRef.current = u;
     setUser(u);
@@ -165,7 +174,7 @@ export default function HomePage() {
       setCollectedBadgesMap(new Map());
       setNewBadgeStationId(null);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   const handleBadgeSuccess = useCallback((result: { station_id: string; station_name: string; badge_image_url: string | null }) => {
     setCollectedStationIds((prev) => new Set(prev).add(result.station_id));
@@ -175,9 +184,9 @@ export default function HomePage() {
       return next;
     });
     setNewBadgeStationId(result.station_id);
-    showToast(`打卡成功，歡迎到訪${result.station_name}車站`, 'success');
+    showToast(t.checkin.successMsg(result.station_name), 'success');
     setTimeout(() => setNewBadgeStationId(null), 2000);
-  }, [showToast]);
+  }, [showToast, t]);
 
   const [geojson, setGeojson] = useState<any | null>(null);
   const [loadingGeo, setLoadingGeo] = useState(false);
@@ -254,7 +263,7 @@ export default function HomePage() {
     const next = !mockLogin;
     setMockLogin(next);
     if (next && geojson) {
-      showToast('模擬登入已開啟', 'info');
+      showToast(t.account.mockLoginOn, 'info');
       const ids = new Set<string>();
       const badgesMap = new Map<string, { unlocked_at: string; badge_image_url: string | null }>();
 
@@ -295,33 +304,33 @@ export default function HomePage() {
       setCollectedStationIds(ids);
       setCollectedBadgesMap(badgesMap);
     } else {
-      showToast('模擬登入已關閉', 'info');
+      showToast(t.account.mockLoginOff, 'info');
       setCollectedStationIds(new Set());
       setCollectedBadgesMap(new Map());
       setShowAllBadges(false);
     }
-  }, [mockLogin, geojson, showToast]);
+  }, [mockLogin, geojson, showToast, t]);
 
   // Focus button: fly to user's current location
   const handleFocus = useCallback(() => {
     if (!navigator.geolocation) {
-      showToast('您的瀏覽器不支援定位功能', 'error');
+      showToast(t.map.locateNotSupported, 'error');
       return;
     }
-    const loadingId = showToast('定位中…', 'loading');
+    const loadingId = showToast(t.map.locating, 'loading');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         dismissToast(loadingId);
         const { latitude, longitude } = pos.coords;
         mapFlyToRef.current?.(latitude, longitude, 16);
-        showToast('定位成功', 'success');
+        showToast(t.map.locateSuccess, 'success');
       },
       () => {
         dismissToast(loadingId);
-        showToast('定位失敗，請確認定位權限', 'error');
+        showToast(t.map.locateFail, 'error');
       },
     );
-  }, [showToast, dismissToast]);
+  }, [showToast, dismissToast, t]);
 
   // Train schedule station pick callback — dialog stays open
   const handleRequestPick = useCallback((target: StationPickTarget) => {
@@ -363,7 +372,7 @@ export default function HomePage() {
       {/* ════════════════════════════════════════════════════════════
           Desktop: Vertical icon bar (Google Maps style, far left)
           ════════════════════════════════════════════════════════════ */}
-      <nav className={styles.desktopIconBar} aria-label="功能列">
+      <nav className={styles.desktopIconBar} aria-label={t.map.navLabel}>
         <div className={styles.iconBarGroup}>
           {/* Account */}
           <button
@@ -375,10 +384,10 @@ export default function HomePage() {
                 handleDesktopSignIn();
               }
             }}
-            aria-label={isLoggedIn ? '帳號' : '登入'}
+            aria-label={isLoggedIn ? t.account.label : t.common.signIn}
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-            <span className={styles.iconBarLabel}>帳號</span>
+            <span className={styles.iconBarLabel}>{t.account.label}</span>
           </button>
 
           {/* Checkin (visible only when logged in) */}
@@ -392,10 +401,10 @@ export default function HomePage() {
           <button
             className={styles.iconBarBtn}
             onClick={handleFocus}
-            aria-label="定位至目前位置"
+            aria-label={t.map.locateAriaLabel}
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M12 2v4" /><path d="M12 18v4" /><path d="M2 12h4" /><path d="M18 12h4" /><circle cx="12" cy="12" r="8" /></svg>
-            <span className={styles.iconBarLabel}>定位</span>
+            <span className={styles.iconBarLabel}>{t.map.locate}</span>
           </button>
 
           {/* Train schedule */}
@@ -410,10 +419,10 @@ export default function HomePage() {
                 setStationPickTarget(null);
               }
             }}
-            aria-label="台鐵班次查詢"
+            aria-label={t.map.trainScheduleAriaLabel}
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M12 7v5l3 3" /><path d="M8 21h8" /><path d="M12 21v2" /></svg>
-            <span className={styles.iconBarLabel}>班次</span>
+            <span className={styles.iconBarLabel}>{t.map.trainSchedule}</span>
           </button>
         </div>
       </nav>
@@ -422,7 +431,7 @@ export default function HomePage() {
           Desktop: Content panel (opens to the right of icon bar)
           ════════════════════════════════════════════════════════════ */}
       {desktopPanel && (
-        <aside className={styles.desktopPanel} aria-label="資訊面板">
+        <aside className={styles.desktopPanel} aria-label={t.map.infoPanel}>
           <button
             className={styles.panelClose}
             onClick={() => {
@@ -432,7 +441,7 @@ export default function HomePage() {
                 setStationPickTarget(null);
               }
             }}
-            aria-label="關閉面板"
+            aria-label={t.map.closePanel}
           >
             ✕
           </button>
@@ -458,7 +467,7 @@ export default function HomePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={user.user_metadata.avatar_url}
-                    alt={user.user_metadata?.full_name ?? '使用者頭像'}
+                    alt={user.user_metadata?.full_name ?? t.account.avatar}
                     className={styles.desktopAccountAvatar}
                   />
                 ) : (
@@ -467,14 +476,14 @@ export default function HomePage() {
                   </div>
                 )}
                 <span className={styles.desktopAccountName}>
-                  {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? '模擬使用者' : '使用者')}
+                  {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? t.account.mockUser : t.account.user)}
                 </span>
 
                 <button
                   className={styles.desktopAccountBtn}
                   onClick={() => setDesktopPanel('progress')}
                 >
-                  紀念章收集冊
+                  {t.account.badgeCollection}
                 </button>
 
                 {handleMockLoginToggle && (
@@ -482,15 +491,17 @@ export default function HomePage() {
                     className={`${styles.desktopAccountBtn} ${mockLogin ? styles.desktopAccountBtnActive : ''}`}
                     onClick={handleMockLoginToggle}
                   >
-                    {mockLogin ? '關閉模擬登入' : '模擬登入'}
+                    {mockLogin ? t.account.closeMockLogin : t.account.mockLogin}
                   </button>
                 )}
 
                 {user && (
                   <button onClick={handleDesktopSignOut} className={styles.desktopAccountLogout}>
-                    登出
+                    {t.common.signOut}
                   </button>
                 )}
+
+                <AccountSettings />
               </div>
             </div>
           )}
@@ -538,12 +549,12 @@ export default function HomePage() {
       <section className={styles.mapSection} aria-label="Interactive railway map">
         {loadingGeo && (
           <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 900 }} aria-live="polite">
-            地圖資料載入中…
+            {t.map.dataLoading}
           </div>
         )}
         {geoError && (
           <div style={{ position: 'absolute', left: 16, top: 16, zIndex: 900, background: '#fee', color: '#900', padding: '6px 8px', borderRadius: 6 }} role="status">
-            載入資料失敗：{geoError}
+            {t.map.loadError}{geoError}
           </div>
         )}
 
@@ -559,7 +570,7 @@ export default function HomePage() {
         />
 
         {/* ── Mobile toolbar: 帳號 → 打卡 → Focus → 班次查詢 ── */}
-        <nav className={styles.mobileToolbar} aria-label="主要功能列">
+        <nav className={styles.mobileToolbar} aria-label={t.map.navLabel}>
           <div className={styles.toolbarItem}>
             <AuthButton
               onAuthChange={handleAuthChange}
@@ -580,7 +591,7 @@ export default function HomePage() {
           <button
             className={styles.toolbarItem}
             onClick={handleFocus}
-            aria-label="定位至目前位置"
+            aria-label={t.map.locateAriaLabel}
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="3" />
@@ -590,13 +601,13 @@ export default function HomePage() {
               <path d="M18 12h4" />
               <circle cx="12" cy="12" r="8" />
             </svg>
-            <span className={styles.toolbarLabel}>定位</span>
+            <span className={styles.toolbarLabel}>{t.map.locate}</span>
           </button>
 
           <button
             className={styles.toolbarItem}
             onClick={() => setTrainDialogOpen(true)}
-            aria-label="台鐵班次查詢"
+            aria-label={t.map.trainScheduleAriaLabel}
           >
             <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="3" width="16" height="18" rx="2" />
@@ -604,7 +615,7 @@ export default function HomePage() {
               <path d="M8 21h8" />
               <path d="M12 21v2" />
             </svg>
-            <span className={styles.toolbarLabel}>班次</span>
+            <span className={styles.toolbarLabel}>{t.map.trainSchedule}</span>
           </button>
         </nav>
       </section>
@@ -614,7 +625,7 @@ export default function HomePage() {
         <BottomSheet
           open={mobileProgressOpen}
           onOpenChange={setMobileProgressOpen}
-          title="車站紀念章收集進度"
+          title={t.bottomSheet.progressTitle}
           defaultSnap={1}
         >
           <FeatureDetails
@@ -636,7 +647,7 @@ export default function HomePage() {
         <BottomSheet
           open={sheetOpen}
           onOpenChange={(open) => { if (!open) handleClose(); }}
-          title="車站 / 路線詳情"
+          title={t.bottomSheet.detailsTitle}
           defaultSnap={1}
         >
           <FeatureDetails
@@ -657,7 +668,7 @@ export default function HomePage() {
             setTrainDialogOpen(open);
             if (!open) setStationPickTarget(null);
           }}
-          title="台鐵班次查詢"
+          title={t.bottomSheet.trainTitle}
           defaultSnap={1}
         >
           <TrainScheduleDialog

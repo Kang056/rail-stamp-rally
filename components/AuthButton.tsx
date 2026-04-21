@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import BottomSheet from './BottomSheet';
+import AccountSettings from './AccountSettings';
 import { useIsMobile } from '@/lib/useIsMobile';
+import { useTranslation } from '@/lib/i18n';
 import styles from './AuthButton.module.css';
 
 export type { User };
@@ -34,6 +36,7 @@ export default function AuthButton({
   const isMobile = useIsMobile();
   const onAuthChangeRef = useRef(onAuthChange);
   onAuthChangeRef.current = onAuthChange;
+  const { t } = useTranslation();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -83,14 +86,14 @@ export default function AuthButton({
           handleSignIn();
         }
       }}
-      aria-label={showLoggedIn ? '使用者選單' : '使用google登入'}
+      aria-label={showLoggedIn ? t.account.menu : t.common.signIn}
     >
-      <span className={styles.tooltip}>帳號</span>
+      <span className={styles.tooltip}>{t.account.tooltip}</span>
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
         <circle cx="12" cy="7" r="4" />
       </svg>
-      <span className={styles.avatarLabel}>帳號</span>
+      <span className={styles.avatarLabel}>{t.account.label}</span>
     </button>
   );
 
@@ -102,7 +105,7 @@ export default function AuthButton({
         <BottomSheet
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          title="帳號"
+          title={t.account.title}
           defaultSnap={1}
         >
           <div className={styles.accountContent}>
@@ -111,7 +114,7 @@ export default function AuthButton({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={user.user_metadata.avatar_url}
-                alt={user.user_metadata?.full_name ?? '使用者頭像'}
+                alt={user.user_metadata?.full_name ?? t.account.avatar}
                 className={styles.accountAvatar}
               />
             ) : (
@@ -125,7 +128,7 @@ export default function AuthButton({
 
             {/* Name */}
             <span className={styles.accountName}>
-              {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? '模擬使用者' : '使用者')}
+              {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? t.account.mockUser : t.account.user)}
             </span>
 
             {/* Badge collection button */}
@@ -137,7 +140,7 @@ export default function AuthButton({
                   onOpenBadgeCollection();
                 }}
               >
-                紀念章收集冊
+                {t.account.badgeCollection}
               </button>
             )}
 
@@ -147,16 +150,19 @@ export default function AuthButton({
                 className={`${styles.accountActionBtn} ${mockLogin ? styles.accountActionBtnActive : ''}`}
                 onClick={onMockLoginToggle}
               >
-                {mockLogin ? '關閉模擬登入' : '模擬登入'}
+                {mockLogin ? t.account.closeMockLogin : t.account.mockLogin}
               </button>
             )}
 
             {/* Logout */}
             {user && (
               <button onClick={handleSignOut} className={styles.logoutBtn}>
-                登出
+                {t.common.signOut}
               </button>
             )}
+
+            {/* Settings */}
+            <AccountSettings />
           </div>
         </BottomSheet>
       )}

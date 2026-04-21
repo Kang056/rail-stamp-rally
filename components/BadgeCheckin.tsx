@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
+import { useTranslation } from '@/lib/i18n';
 import styles from './BadgeCheckin.module.css';
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
 
 export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
   const [loading, setLoading] = useState(false);
+  const { t } = useTranslation();
 
   if (!user) {
     return null;
@@ -22,7 +24,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
     setLoading(true);
     try {
       if (!navigator.geolocation) {
-        onToast?.('您的瀏覽器不支援地理定位', 'error');
+        onToast?.(t.checkin.noGeo, 'error');
         return;
       }
 
@@ -38,20 +40,20 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
       });
 
       if (rpcErr) {
-        onToast?.(rpcErr.message ?? '打卡失敗', 'error');
+        onToast?.(rpcErr.message ?? t.checkin.fail, 'error');
         return;
       }
 
       const result = rpcData as any;
 
       if (!result.ok) {
-        onToast?.('打卡失敗！未在車站範圍內', 'error');
+        onToast?.(t.checkin.outOfRange, 'error');
         return;
       }
 
       if (result.already_unlocked) {
         const d = new Date(result.unlocked_at);
-        onToast?.(`${result.station_name}車站已在${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日打卡完成`, 'info');
+        onToast?.(t.checkin.alreadyCheckedIn(result.station_name, `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`), 'info');
         return;
       }
 
@@ -64,7 +66,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
       }
     } catch (e: any) {
       if (e && e.code === 1) {
-        onToast?.('請允許定位權限以完成打卡', 'error');
+        onToast?.(t.checkin.permissionDenied, 'error');
       } else {
         onToast?.(e?.message ?? String(e), 'error');
       }
@@ -77,7 +79,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
     <button
       onClick={handleCheckin}
       disabled={loading}
-      aria-label="打卡"
+      aria-label={t.checkin.ariaLabel}
       className={styles.checkinBtn}
       type="button"
     >
@@ -102,7 +104,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
           />
         </svg>
       )}
-      <span className={styles.label}>打卡</span>
+      <span className={styles.label}>{t.checkin.label}</span>
     </button>
   );
 }

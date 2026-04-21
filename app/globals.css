@@ -6,12 +6,78 @@
   padding: 0;
 }
 
+/* ── CSS Custom Properties (Design Tokens) ──────────────────────────────── */
+:root {
+  /* Dark mode defaults */
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #252542;
+  --bg-panel: #1e1e38;
+  --bg-panel-content: #ffffff;
+  --text-primary: #f0f0f0;
+  --text-secondary: #aaaaaa;
+  --text-panel: #111111;
+  --text-panel-secondary: #555555;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-panel: #e0e0e0;
+  --shadow-panel: 2px 0 12px rgba(0, 0, 0, 0.08);
+
+  /* Accent / theme color (default = cyan) */
+  --accent: #20b8d4;
+  --accent-light: rgba(32, 184, 212, 0.15);
+  --accent-text: #20b8d4;
+
+  /* Toolbar */
+  --toolbar-bg: #1a1a2e;
+  --toolbar-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ── Light mode overrides ────────────────────────────────────────────────── */
+:root[data-color-mode="light"] {
+  --bg-primary: #f0f2f5;
+  --bg-secondary: #e8eaed;
+  --bg-panel: #e0e2e5;
+  --bg-panel-content: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #555555;
+  --text-panel: #111111;
+  --text-panel-secondary: #666666;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --border-panel: #d0d0d0;
+  --shadow-panel: 2px 0 12px rgba(0, 0, 0, 0.12);
+  --toolbar-bg: #f0f2f5;
+  --toolbar-border: rgba(0, 0, 0, 0.1);
+}
+
+/* ── Theme color overrides ───────────────────────────────────────────────── */
+:root[data-theme-color="blue"] {
+  --accent: #3b82f6;
+  --accent-light: rgba(59, 130, 246, 0.15);
+  --accent-text: #3b82f6;
+}
+:root[data-theme-color="green"] {
+  --accent: #22c55e;
+  --accent-light: rgba(34, 197, 94, 0.15);
+  --accent-text: #22c55e;
+}
+:root[data-theme-color="orange"] {
+  --accent: #f97316;
+  --accent-light: rgba(249, 115, 22, 0.15);
+  --accent-text: #f97316;
+}
+:root[data-theme-color="red"] {
+  --accent: #ef4444;
+  --accent-light: rgba(239, 68, 68, 0.15);
+  --accent-text: #ef4444;
+}
+
+/* ── Base styles ─────────────────────────────────────────────────────────── */
 html, body {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
     Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-  background: #1a1a2e;
-  color: #f0f0f0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* Leaflet CSS is imported inside Map.tsx (browser-only) */

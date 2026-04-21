@@ -13,6 +13,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { fetchLiveTrainDelay } from '@/lib/tdxApi';
+import { useTranslation } from '@/lib/i18n';
 import styles from './TrainScheduleDialog.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -201,6 +202,7 @@ export default function TrainScheduleDialog({
 }: TrainScheduleDialogProps) {
   const isMobile = useIsMobile();
   const useDropdown = isMobile && traStations && traStations.length > 0;
+  const { t } = useTranslation();
 
   const [origin, setOrigin] = useState<StationInfo | null>(null);
   const [destination, setDestination] = useState<StationInfo | null>(null);
@@ -267,7 +269,7 @@ export default function TrainScheduleDialog({
     setLoading(true);
     setError(null);
     setResults(null);
-    const loadingId = onToast?.('班次查詢中…', 'loading');
+    const loadingId = onToast?.(t.train.queryToast, 'loading');
     try {
       const trains = await queryTdxTrainSchedule(
         origin.stationId,
@@ -276,31 +278,31 @@ export default function TrainScheduleDialog({
       );
       setResults(trains);
       if (loadingId) onDismissToast?.(loadingId);
-      onToast?.(`查詢完成，共 ${trains.length} 筆班次`, 'success');
+      onToast?.(t.train.querySuccess(trains.length), 'success');
     } catch (err: any) {
-      setError(err?.message ?? '查詢失敗');
+      setError(err?.message ?? t.train.queryFail);
       if (loadingId) onDismissToast?.(loadingId);
-      onToast?.(err?.message ?? '查詢失敗', 'error');
+      onToast?.(err?.message ?? t.train.queryFail, 'error');
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, date, onToast, onDismissToast]);
+  }, [origin, destination, date, onToast, onDismissToast, t]);
 
   const stepMessages: Record<number, string> = useDropdown
     ? {
-        1: '步驟 1：請從下拉選單選取起站',
-        2: '步驟 2：請從下拉選單選取迄站',
-        3: '步驟 3：請設定查詢日期，然後按「查詢班次」',
+        1: t.train.stepDropdown1,
+        2: t.train.stepDropdown2,
+        3: t.train.stepDropdown3,
       }
     : {
-        1: '步驟 1：請選取起站 — 點擊下方「起站」欄位，再點選地圖上的台鐵車站',
-        2: '步驟 2：請選取迄站 — 點擊下方「迄站」欄位，再點選地圖上的台鐵車站',
-        3: '步驟 3：請設定查詢日期，然後按「查詢班次」',
+        1: t.train.stepMap1,
+        2: t.train.stepMap2,
+        3: t.train.stepMap3,
       };
 
   return (
     <div className={styles.container}>
-      <h3 className={styles.title}>🚂 台鐵班次查詢</h3>
+      <h3 className={styles.title}>{t.train.title}</h3>
 
       {/* Step guidance indicator */}
       <div className={styles.stepIndicator}>
@@ -317,12 +319,12 @@ export default function TrainScheduleDialog({
 
       {/* Station picker fields */}
       <div className={styles.fieldGroup}>
-        <label className={styles.label}>起站</label>
+        <label className={styles.label}>{t.train.origin}</label>
         {useDropdown ? (
           <div className={styles.stationSelect}>
             <input
               className={styles.stationSelectInput}
-              placeholder="輸入站名搜尋…"
+              placeholder={t.train.searchPlaceholder}
               value={origin ? origin.stationName : originQuery}
               onChange={(e) => {
                 if (origin) setOrigin(null);
@@ -349,7 +351,7 @@ export default function TrainScheduleDialog({
                   setOriginQuery('');
                   setOriginDropdownOpen(false);
                 }}
-                aria-label="清除起站"
+                aria-label={t.train.clearOrigin}
               >
                 ✕
               </button>
@@ -378,18 +380,18 @@ export default function TrainScheduleDialog({
             className={`${styles.pickerBtn} ${pickTarget === 'origin' ? styles.pickerBtnActive : ''}`}
             onClick={() => onRequestPick('origin')}
           >
-            {origin ? `🚉 ${origin.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
+            {origin ? `🚉 ${origin.stationName}` : t.train.selectOnMap}
           </button>
         )}
       </div>
 
       <div className={styles.fieldGroup}>
-        <label className={styles.label}>迄站</label>
+        <label className={styles.label}>{t.train.destination}</label>
         {useDropdown ? (
           <div className={styles.stationSelect}>
             <input
               className={styles.stationSelectInput}
-              placeholder="輸入站名搜尋…"
+              placeholder={t.train.searchPlaceholder}
               value={destination ? destination.stationName : destQuery}
               onChange={(e) => {
                 if (destination) setDestination(null);
@@ -416,7 +418,7 @@ export default function TrainScheduleDialog({
                   setDestQuery('');
                   setDestDropdownOpen(false);
                 }}
-                aria-label="清除迄站"
+                aria-label={t.train.clearDest}
               >
                 ✕
               </button>
@@ -445,7 +447,7 @@ export default function TrainScheduleDialog({
             className={`${styles.pickerBtn} ${pickTarget === 'destination' ? styles.pickerBtnActive : ''}`}
             onClick={() => onRequestPick('destination')}
           >
-            {destination ? `🚉 ${destination.stationName}` : '👆 點擊後請在地圖上選取台鐵車站'}
+            {destination ? `🚉 ${destination.stationName}` : t.train.selectOnMap}
           </button>
         )}
       </div>
@@ -453,7 +455,7 @@ export default function TrainScheduleDialog({
       {/* Date picker (visible at step 3) */}
       <div className={`${styles.timeSection} ${currentStep >= 3 ? styles.timeSectionActive : ''}`}>
         <div className={styles.fieldGroup}>
-          <label className={styles.label}>查詢日期</label>
+          <label className={styles.label}>{t.train.queryDate}</label>
           <input
             type="date"
             className={styles.timeInput}
@@ -468,7 +470,7 @@ export default function TrainScheduleDialog({
           onClick={handleQuery}
           disabled={!origin || !destination || loading}
         >
-          {loading ? '查詢中…' : '查詢班次'}
+          {loading ? t.train.querying : t.train.query}
         </button>
       </div>
 
@@ -477,7 +479,7 @@ export default function TrainScheduleDialog({
 
       {/* Results */}
       {results && results.length === 0 && (
-        <div className={styles.noResult}>此時段無查詢到班次資料</div>
+        <div className={styles.noResult}>{t.train.noResult}</div>
       )}
 
       {results && results.length > 0 && (
@@ -492,24 +494,24 @@ export default function TrainScheduleDialog({
               <div className={styles.cardBody}>
                 <div className={styles.cardTime}>
                   <div className={styles.cardTimeItem}>
-                    <span className={styles.cardTimeLabel}>出發</span>
+                    <span className={styles.cardTimeLabel}>{t.train.departure}</span>
                     <span className={styles.cardTimeValue}>{train.departureTime || '-'}</span>
                   </div>
                   <span className={styles.cardArrow}>→</span>
                   <div className={styles.cardTimeItem}>
-                    <span className={styles.cardTimeLabel}>抵達</span>
+                    <span className={styles.cardTimeLabel}>{t.train.arrival}</span>
                     <span className={styles.cardTimeValue}>{train.arrivalTime || '-'}</span>
                   </div>
                 </div>
                 <div className={styles.cardMeta}>
                   <span className={styles.cardMetaItem}>
-                    🕐 {train.travelTime || '-'}
+                    {t.train.travelTime(train.travelTime || '-')}
                   </span>
                   <span className={`${styles.cardMetaItem} ${train.delayMinutes ? styles.delayed : ''}`}>
                     {train.delayMinutes != null
                       ? train.delayMinutes > 0
-                        ? `⚠ 誤點 ${train.delayMinutes}分`
-                        : '✅ 準點'
+                        ? t.train.delayed(train.delayMinutes)
+                        : t.train.onTime
                       : ''}
                   </span>
                 </div>
