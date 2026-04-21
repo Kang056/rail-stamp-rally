@@ -84,9 +84,11 @@ export default function DraggableDialog({
     if (dragState.current.moved) {
       const newX = dragState.current.origX + dx;
       const newY = dragState.current.origY + dy;
-      // Clamp to viewport
-      const maxX = window.innerWidth - 60;
-      const maxY = window.innerHeight - 40;
+      // Clamp so at least MIN_VISIBLE_PX of the dialog remains visible near each edge
+      const MIN_VISIBLE_PX_X = 60;
+      const MIN_VISIBLE_PX_Y = 40;
+      const maxX = window.innerWidth - MIN_VISIBLE_PX_X;
+      const maxY = window.innerHeight - MIN_VISIBLE_PX_Y;
       setPos({
         x: Math.max(0, Math.min(newX, maxX)),
         y: Math.max(0, Math.min(newY, maxY)),

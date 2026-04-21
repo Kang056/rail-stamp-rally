@@ -622,7 +622,7 @@ export default function HomePage() {
           initialY={80}
         >
           <TrainScheduleDialog
-            isOpen={trainDialogOpen}
+            isOpen={true}
             pickedStation={pickedStation}
             pickTarget={stationPickTarget}
             onRequestPick={handleRequestPick}
