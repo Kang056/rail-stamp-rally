@@ -1,0 +1,15 @@
+/* CheckinRecordsPanel.module.css */
+
+.container {
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.totalCount {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-panel);
+  margin: 0;
+}

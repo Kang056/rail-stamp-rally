@@ -16,6 +16,11 @@ const zhTW = {
     mockUser: '模擬使用者',
     user: '使用者',
     badgeCollection: '紀念章收集冊',
+    checkinRecords: '打卡紀錄',
+    level: (lv: number) => `LV ${lv}`,
+    levelMax: 'MAX',
+    xpProgress: (earned: number, range: number) => `${earned} / ${range} EXP`,
+    xpProgressMax: (current: number) => `${current} EXP (MAX)`,
     mockLogin: '模擬登入',
     closeMockLogin: '關閉模擬登入',
     mockLoginOn: '模擬登入已開啟',
@@ -60,6 +65,8 @@ const zhTW = {
     successMsg: (stationName: string) => `打卡成功，歡迎到訪${stationName}車站`,
     alreadyCheckedIn: (stationName: string, dateStr: string) =>
       `${stationName}車站已在${dateStr}打卡完成`,
+    xpGainStation: (xp: number) => `+${xp} EXP 獲得（車站打卡）`,
+    xpGainMilestone: (count: number, xp: number) => `+${xp} EXP 獲得（累計打卡 ${count} 次里程碑）`,
   },
   station: {
     system: '系統',
@@ -88,6 +95,7 @@ const zhTW = {
     showStation: '顯示車站',
     hide: (label: string) => `隱藏 ${label}`,
     show: (label: string) => `顯示 ${label}`,
+    checkinCount: (n: number) => `累計打卡次數：${n} 次`,
   },
   auth: {
     signInSuccess: '登入成功',
@@ -127,6 +135,7 @@ const zhTW = {
     progressTitle: '車站紀念章收集進度',
     detailsTitle: '車站 / 路線詳情',
     trainTitle: '台鐵班次查詢',
+    checkinTitle: '打卡紀錄',
   },
   languages: {
     'zh-TW': '繁體中文',

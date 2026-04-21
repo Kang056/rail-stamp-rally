@@ -15,7 +15,7 @@ import type { RailwayFeatureProperties, CollectedBadge } from '@/lib/supabaseCli
 import type { User } from '@supabase/supabase-js';
 import FeatureDetails, { SYSTEM_LABELS } from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
-import { supabase, getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile } from '@/lib/supabaseClient';
+import { supabase, getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile, getUserCheckinCount } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
 import AuthButton from '@/components/AuthButton';
 import AccountSettings from '@/components/AccountSettings';
@@ -24,8 +24,11 @@ import TrainScheduleDialog from '@/components/TrainScheduleDialog';
 import type { StationPickTarget } from '@/components/TrainScheduleDialog';
 import ToastContainer from '@/components/Toast';
 import type { ToastItem } from '@/components/Toast';
+import CheckinRecordsPanel from '@/components/CheckinRecordsPanel';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { useTranslation } from '@/lib/i18n';
+import { calculateTotalXp, getLevelInfo, getStationXp, CHECKIN_MILESTONES } from '@/lib/levelSystem';
+import type { LevelInfo, RailwaySystemType } from '@/lib/levelSystem';
 import styles from './page.module.css';
 
 // ── Lazy-load heavy dependencies ──────────────────────────────────────────────
@@ -43,7 +46,7 @@ const LeafletMap = dynamic(() => import('@/components/Map'), {
   loading: MapLoadingFallback,
 });
 // ── Types ─────────────────────────────────────────────────────────────────────
-type DesktopPanelType = 'details' | 'account' | 'progress' | 'train' | null;
+type DesktopPanelType = 'details' | 'account' | 'progress' | 'train' | 'checkin' | null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page component
@@ -65,6 +68,10 @@ export default function HomePage() {
   const [visibleSystems, setVisibleSystems] = useState<Set<string>>(
     () => new Set(Object.keys(SYSTEM_LABELS))
   );
+
+  // Checkin count & mobile checkin panel
+  const [checkinCount, setCheckinCount] = useState<number>(0);
+  const [mobileCheckinOpen, setMobileCheckinOpen] = useState(false);
 
   // Train schedule dialog state
   const [trainDialogOpen, setTrainDialogOpen] = useState(false);
@@ -93,6 +100,8 @@ export default function HomePage() {
   // Map ref for flyTo (focus button)
   const mapFlyToRef = useRef<((lat: number, lng: number, zoom: number) => void) | null>(null);
   const prevUserRef = useRef<User | null>(null);
+  // Ref to access latest geojson inside callbacks without re-creating them
+  const geojsonRef = useRef<any>(null);
 
   const handleMapReady = useCallback((flyTo: (lat: number, lng: number, zoom: number) => void) => {
     mapFlyToRef.current = flyTo;
@@ -173,6 +182,7 @@ export default function HomePage() {
       setCollectedStationIds(new Set());
       setCollectedBadgesMap(new Map());
       setNewBadgeStationId(null);
+      setCheckinCount(0);
     }
   }, [showToast, t]);
 
@@ -183,12 +193,36 @@ export default function HomePage() {
       next.set(result.station_id, { unlocked_at: new Date().toISOString(), badge_image_url: result.badge_image_url });
       return next;
     });
+    // Increment checkin count on every successful check-in
+    setCheckinCount(prev => {
+      const newCount = prev + 1;
+
+      // Show XP gain notification for the station
+      const stationFeature = geojsonRef.current?.features?.find(
+        (f: any) => f.properties.feature_type === 'station' && f.properties.station_id === result.station_id
+      );
+      const systemType = (stationFeature?.properties?.system_type ?? 'TRA') as RailwaySystemType;
+      const stationXp = getStationXp(result.station_name, systemType);
+      setTimeout(() => showToast(t.checkin.xpGainStation(stationXp), 'success'), 400);
+
+      // Check if this checkin count hits a milestone
+      const milestone = CHECKIN_MILESTONES.find(m => m.count === newCount);
+      if (milestone) {
+        setTimeout(() => showToast(t.checkin.xpGainMilestone(milestone.count, milestone.xp), 'success'), 900);
+      }
+
+      return newCount;
+    });
     setNewBadgeStationId(result.station_id);
     showToast(t.checkin.successMsg(result.station_name), 'success');
     setTimeout(() => setNewBadgeStationId(null), 2000);
   }, [showToast, t]);
 
-  const [geojson, setGeojson] = useState<any | null>(null);
+  const [geojson, setGeojsonState] = useState<any | null>(null);
+  const setGeojson = useCallback((data: any) => {
+    geojsonRef.current = data;
+    setGeojsonState(data);
+  }, []);
   const [loadingGeo, setLoadingGeo] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
@@ -204,7 +238,7 @@ export default function HomePage() {
     } finally {
       setLoadingGeo(false);
     }
-  }, []);
+  }, [setGeojson]);
 
   useEffect(() => {
     fetchGeo();
@@ -221,6 +255,7 @@ export default function HomePage() {
     }).catch((err) => {
       console.error('Failed to fetch user badges:', err);
     });
+    getUserCheckinCount(user.id).then(setCheckinCount).catch(() => {});
   }, [user]);
 
   const stationCountsBySystem = useMemo(() => {
@@ -257,6 +292,12 @@ export default function HomePage() {
     });
     return counts;
   }, [geojson, collectedBadgesMap]);
+
+  const totalXp = useMemo(
+    () => calculateTotalXp(collectedBadgesMap, geojson, checkinCount),
+    [collectedBadgesMap, geojson, checkinCount]
+  );
+  const levelInfo: LevelInfo = useMemo(() => getLevelInfo(totalXp), [totalXp]);
 
   // Mock login toggle
   const handleMockLoginToggle = useCallback(() => {
@@ -303,11 +344,13 @@ export default function HomePage() {
 
       setCollectedStationIds(ids);
       setCollectedBadgesMap(badgesMap);
+      setCheckinCount(ids.size);
     } else {
       showToast(t.account.mockLoginOff, 'info');
       setCollectedStationIds(new Set());
       setCollectedBadgesMap(new Map());
       setShowAllBadges(false);
+      setCheckinCount(0);
     }
   }, [mockLogin, geojson, showToast, t]);
 
@@ -479,11 +522,38 @@ export default function HomePage() {
                   {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? t.account.mockUser : t.account.user)}
                 </span>
 
+                {/* Level + XP bar */}
+                {isLoggedIn && (
+                  <div className={styles.desktopLevelSection}>
+                    <div className={styles.desktopLevelBadge}>
+                      {levelInfo.isMax ? t.account.levelMax : t.account.level(levelInfo.level)}
+                    </div>
+                    <div className={styles.desktopXpBarOuter}>
+                      <div
+                        className={styles.desktopXpBarInner}
+                        style={{ width: `${levelInfo.progressPercent}%` }}
+                      />
+                    </div>
+                    <div className={styles.desktopXpText}>
+                      {levelInfo.isMax
+                        ? t.account.xpProgressMax(levelInfo.currentXp)
+                        : t.account.xpProgress(levelInfo.earnedInLevel, levelInfo.rangeXp)}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   className={styles.desktopAccountBtn}
                   onClick={() => setDesktopPanel('progress')}
                 >
                   {t.account.badgeCollection}
+                </button>
+
+                <button
+                  className={styles.desktopAccountBtn}
+                  onClick={() => setDesktopPanel('checkin')}
+                >
+                  {t.account.checkinRecords}
                 </button>
 
                 {handleMockLoginToggle && (
@@ -519,6 +589,16 @@ export default function HomePage() {
                 onToggleSystem={handleToggleSystem}
                 showStations={showStations}
                 onToggleStations={handleToggleStations}
+              />
+            </div>
+          )}
+
+          {/* Checkin records */}
+          {desktopPanel === 'checkin' && (
+            <div className={styles.panelContent}>
+              <CheckinRecordsPanel
+                checkinCount={checkinCount}
+                t={t}
               />
             </div>
           )}
@@ -580,7 +660,11 @@ export default function HomePage() {
                 setSheetOpen(false);
                 setMobileProgressOpen(true);
               }}
+              onOpenCheckinRecords={() => {
+                setMobileCheckinOpen(true);
+              }}
               isLoggedIn={isLoggedIn}
+              levelInfo={isLoggedIn ? levelInfo : undefined}
             />
           </div>
 
@@ -683,6 +767,21 @@ export default function HomePage() {
             onToast={showToast}
             onDismissToast={dismissToast}
             traStations={traStations}
+          />
+        </BottomSheet>
+      )}
+
+      {/* ── Mobile: Checkin Records BottomSheet ── */}
+      {isMobile && (
+        <BottomSheet
+          open={mobileCheckinOpen}
+          onOpenChange={setMobileCheckinOpen}
+          title={t.bottomSheet.checkinTitle}
+          defaultSnap={1}
+        >
+          <CheckinRecordsPanel
+            checkinCount={checkinCount}
+            t={t}
           />
         </BottomSheet>
       )}

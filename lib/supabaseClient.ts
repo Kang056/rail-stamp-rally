@@ -181,3 +181,20 @@ export async function upsertProfile(user: {
     console.error('Failed to upsert profile:', error.message);
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getUserCheckinCount
+// Returns the total number of successful check-ins for a user (across all days).
+// ─────────────────────────────────────────────────────────────────────────────
+export async function getUserCheckinCount(userId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('get_user_checkin_count', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error('Failed to fetch checkin count:', error.message);
+    return 0;
+  }
+
+  return (data as number) ?? 0;
+}

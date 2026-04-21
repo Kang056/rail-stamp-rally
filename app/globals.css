@@ -12,14 +12,14 @@
   --bg-primary: #1a1a2e;
   --bg-secondary: #252542;
   --bg-panel: #1e1e38;
-  --bg-panel-content: #ffffff;
+  --bg-panel-content: #252542;
   --text-primary: #f0f0f0;
   --text-secondary: #aaaaaa;
-  --text-panel: #111111;
-  --text-panel-secondary: #555555;
+  --text-panel: #e8e8f0;
+  --text-panel-secondary: #9999bb;
   --border-color: rgba(255, 255, 255, 0.1);
-  --border-panel: #e0e0e0;
-  --shadow-panel: 2px 0 12px rgba(0, 0, 0, 0.08);
+  --border-panel: rgba(255, 255, 255, 0.12);
+  --shadow-panel: 2px 0 12px rgba(0, 0, 0, 0.35);
 
   /* Accent / theme color (default = cyan) */
   --accent: #20b8d4;

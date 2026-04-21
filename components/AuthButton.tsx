@@ -19,8 +19,12 @@ interface AuthButtonProps {
   onMockLoginToggle?: () => void;
   /** Open the badge collection / progress drawer */
   onOpenBadgeCollection?: () => void;
+  /** Open the check-in records drawer */
+  onOpenCheckinRecords?: () => void;
   /** Whether the user is considered logged in (real or mock) */
   isLoggedIn?: boolean;
+  /** Level and XP info for the current user */
+  levelInfo?: import('@/lib/levelSystem').LevelInfo;
 }
 
 export default function AuthButton({
@@ -28,7 +32,9 @@ export default function AuthButton({
   mockLogin = false,
   onMockLoginToggle,
   onOpenBadgeCollection,
+  onOpenCheckinRecords,
   isLoggedIn = false,
+  levelInfo,
 }: AuthButtonProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,6 +137,26 @@ export default function AuthButton({
               {user?.user_metadata?.full_name ?? user?.email ?? (mockLogin ? t.account.mockUser : t.account.user)}
             </span>
 
+            {/* Level + XP bar */}
+            {showLoggedIn && levelInfo && (
+              <div className={styles.levelSection}>
+                <div className={styles.levelBadge}>
+                  {levelInfo.isMax ? t.account.levelMax : t.account.level(levelInfo.level)}
+                </div>
+                <div className={styles.xpBarOuter}>
+                  <div
+                    className={styles.xpBarInner}
+                    style={{ width: `${levelInfo.progressPercent}%` }}
+                  />
+                </div>
+                <div className={styles.xpText}>
+                  {levelInfo.isMax
+                    ? t.account.xpProgressMax(levelInfo.currentXp)
+                    : t.account.xpProgress(levelInfo.earnedInLevel, levelInfo.rangeXp)}
+                </div>
+              </div>
+            )}
+
             {/* Badge collection button */}
             {showLoggedIn && onOpenBadgeCollection && (
               <button
@@ -141,6 +167,19 @@ export default function AuthButton({
                 }}
               >
                 {t.account.badgeCollection}
+              </button>
+            )}
+
+            {/* Checkin records button */}
+            {showLoggedIn && onOpenCheckinRecords && (
+              <button
+                className={styles.accountActionBtn}
+                onClick={() => {
+                  setDrawerOpen(false);
+                  onOpenCheckinRecords();
+                }}
+              >
+                {t.account.checkinRecords}
               </button>
             )}
 

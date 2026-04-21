@@ -12,8 +12,8 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: #ffffff;
-  color: #111111;
+  background: var(--bg-panel-content);
+  color: var(--text-panel);
   border-radius: 16px 16px 0 0;
   max-height: 95vh;
   z-index: 1201;
@@ -25,7 +25,7 @@
 .handle {
   width: 36px;
   height: 4px;
-  background: #ccc;
+  background: var(--border-panel);
   border-radius: 2px;
   flex-shrink: 0;
 }
@@ -50,7 +50,7 @@
   border: none;
   font-size: 1rem;
   cursor: pointer;
-  color: #666;
+  color: var(--text-panel-secondary);
   border-radius: 50%;
   display: flex;
   align-items: center;

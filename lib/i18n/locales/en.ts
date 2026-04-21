@@ -18,6 +18,11 @@ const en = {
     mockUser: 'Mock User',
     user: 'User',
     badgeCollection: 'Badge Collection',
+    checkinRecords: 'Check-in Records',
+    level: (lv: number) => `LV ${lv}`,
+    levelMax: 'MAX',
+    xpProgress: (earned: number, range: number) => `${earned} / ${range} EXP`,
+    xpProgressMax: (current: number) => `${current} EXP (MAX)`,
     mockLogin: 'Mock Login',
     closeMockLogin: 'Disable Mock Login',
     mockLoginOn: 'Mock login enabled',
@@ -62,6 +67,8 @@ const en = {
     successMsg: (stationName: string) => `Checked in at ${stationName} Station!`,
     alreadyCheckedIn: (stationName: string, dateStr: string) =>
       `Already checked in at ${stationName} on ${dateStr}`,
+    xpGainStation: (xp: number) => `+${xp} EXP earned (station check-in)`,
+    xpGainMilestone: (count: number, xp: number) => `+${xp} EXP earned (${count} check-in milestone)`,
   },
   station: {
     system: 'System',
@@ -90,6 +97,7 @@ const en = {
     showStation: 'Show stations',
     hide: (label: string) => `Hide ${label}`,
     show: (label: string) => `Show ${label}`,
+    checkinCount: (n: number) => `Total Check-ins: ${n}`,
   },
   auth: {
     signInSuccess: 'Signed in',
@@ -129,6 +137,7 @@ const en = {
     progressTitle: 'Badge Collection Progress',
     detailsTitle: 'Station / Line Details',
     trainTitle: 'TRA Train Schedule',
+    checkinTitle: 'Check-in Records',
   },
   languages: {
     'zh-TW': '繁體中文',

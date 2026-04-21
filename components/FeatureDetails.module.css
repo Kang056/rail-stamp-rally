@@ -124,7 +124,7 @@
 
 .badgeDate {
   font-size: 0.78rem;
-  color: #4caf50;
+  color: var(--accent);
   font-weight: 600;
 }
 
@@ -206,7 +206,7 @@
 }
 
 .toggleOn {
-  background: #4caf50;
+  background: var(--accent);
 }
 
 .toggleOff {
@@ -242,7 +242,7 @@
 
 .progressBarInner {
   height: 100%;
-  background: linear-gradient(90deg, #4caf50, #81c784);
+  background: var(--accent);
   border-radius: 4px;
   transition: width 0.3s ease;
   min-width: 0;
@@ -287,7 +287,7 @@
 .liveBoardGroupTitle {
   font-size: 0.78rem;
   font-weight: 700;
-  color: #444;
+  color: var(--text-panel-secondary);
   margin-bottom: 0.4rem;
   border-bottom: 1px solid rgba(128,128,128,0.2);
   padding-bottom: 0.25rem;
@@ -306,7 +306,7 @@
 
 .liveBoardTrainNo {
   font-weight: 700;
-  color: #20b8d4;
+  color: var(--accent);
   white-space: nowrap;
 }
 
@@ -319,12 +319,12 @@
 
 .liveBoardTime {
   font-weight: 600;
-  color: #222;
+  color: var(--text-panel);
   white-space: nowrap;
 }
 
 .liveBoardDest {
-  color: #555;
+  color: var(--text-panel-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -332,7 +332,7 @@
 
 .liveBoardDelay {
   white-space: nowrap;
-  color: #4caf50;
+  color: var(--accent);
   font-weight: 500;
   font-size: 0.68rem;
 }
