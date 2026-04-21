@@ -111,8 +111,6 @@ async function queryTdxTrainSchedule(
   originId: string,
   destId: string,
   date: string,
-  timeFrom: string,
-  timeTo: string,
 ): Promise<TrainResult[]> {
   const originCode = sanitize(originId);
   const destCode = sanitize(destId);
@@ -147,10 +145,6 @@ async function queryTdxTrainSchedule(
 
       const depTime = originStop?.DepartureTime ?? originStop?.ArrivalTime ?? '';
       const arrTime = destStop?.ArrivalTime ?? destStop?.DepartureTime ?? '';
-
-      // Filter by time range
-      if (depTime && timeFrom && depTime < timeFrom) return;
-      if (depTime && timeTo && depTime > timeTo) return;
 
       // Calculate travel time
       let travelTime = '';
@@ -227,16 +221,8 @@ export default function TrainScheduleDialog({
     return traStations.filter((s) => s.stationName.toLowerCase().includes(q));
   }, [traStations, destQuery]);
 
-  // Default time range: now to +3 hours
-  const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  const defaultFrom = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  const laterHour = (now.getHours() + 3) % 24;
-  const defaultTo = `${pad(laterHour)}:${pad(now.getMinutes())}`;
-
-  const [timeFrom, setTimeFrom] = useState(defaultFrom);
-  const [timeTo, setTimeTo] = useState(defaultTo);
-  const [date] = useState(() => {
+  const [date, setDate] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   });
@@ -285,8 +271,6 @@ export default function TrainScheduleDialog({
         origin.stationId,
         destination.stationId,
         date,
-        timeFrom,
-        timeTo,
       );
       setResults(trains);
       if (loadingId) onDismissToast?.(loadingId);
@@ -298,18 +282,18 @@ export default function TrainScheduleDialog({
     } finally {
       setLoading(false);
     }
-  }, [origin, destination, date, timeFrom, timeTo, onToast, onDismissToast]);
+  }, [origin, destination, date, onToast, onDismissToast]);
 
   const stepMessages: Record<number, string> = useDropdown
     ? {
         1: '步驟 1：請從下拉選單選取起站',
         2: '步驟 2：請從下拉選單選取迄站',
-        3: '步驟 3：請設定時間範圍，然後按「查詢班次」',
+        3: '步驟 3：請設定查詢日期，然後按「查詢班次」',
       }
     : {
         1: '步驟 1：請選取起站 — 點擊下方「起站」欄位，再點選地圖上的台鐵車站',
         2: '步驟 2：請選取迄站 — 點擊下方「迄站」欄位，再點選地圖上的台鐵車站',
-        3: '步驟 3：請設定時間範圍，然後按「查詢班次」',
+        3: '步驟 3：請設定查詢日期，然後按「查詢班次」',
       };
 
   return (
@@ -464,27 +448,16 @@ export default function TrainScheduleDialog({
         )}
       </div>
 
-      {/* Time range (visible at step 3) */}
+      {/* Date picker (visible at step 3) */}
       <div className={`${styles.timeSection} ${currentStep >= 3 ? styles.timeSectionActive : ''}`}>
-        <div className={styles.timeRow}>
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>開始時間</label>
-            <input
-              type="time"
-              className={styles.timeInput}
-              value={timeFrom}
-              onChange={(e) => setTimeFrom(e.target.value)}
-            />
-          </div>
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>結束時間</label>
-            <input
-              type="time"
-              className={styles.timeInput}
-              value={timeTo}
-              onChange={(e) => setTimeTo(e.target.value)}
-            />
-          </div>
+        <div className={styles.fieldGroup}>
+          <label className={styles.label}>查詢日期</label>
+          <input
+            type="date"
+            className={styles.timeInput}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
 
         {/* Query button */}
