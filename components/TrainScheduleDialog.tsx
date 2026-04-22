@@ -120,7 +120,7 @@ async function queryTdxTrainSchedule(
   // Fetch timetable, fare, and live delays in parallel
   const [timetableResp, fareMap, delayMap] = await Promise.all([
     fetch(
-      `https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD/${originCode}/to/${destCode}/${date}?$top=30&$format=JSON`,
+      `https://tdx.transportdata.tw/api/basic/v3/Rail/TRA/DailyTrainTimetable/OD/${originCode}/to/${destCode}/${date}?$top=300&$format=JSON`,
     ),
     queryTdxFare(originId, destId),
     fetchLiveTrainDelay(),

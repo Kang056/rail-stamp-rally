@@ -110,14 +110,19 @@ function LiveBoardRow({ item }: { item: LiveBoardItem }) {
   const { t } = useTranslation();
 
   return (
-    <div className={styles.liveBoardRow}>
-      <span className={styles.liveBoardTrainNo}>{item.TrainNo}</span>
-      <span className={styles.liveBoardType}>{type}</span>
-      <span className={styles.liveBoardTime}>{time}</span>
-      <span className={styles.liveBoardDest}>→{dest}</span>
-      <span className={`${styles.liveBoardDelay} ${delayed ? styles.liveBoardDelayed : ''}`}>
-        {delayed ? t.liveBoard.delayed(item.DelayTime) : t.liveBoard.onTime}
-      </span>
+    <div className={styles.liveBoardCard}>
+      <div className={styles.liveBoardCardHeader}>
+        <span className={styles.liveBoardTrainNo}>{item.TrainNo}</span>
+        {type && <span className={styles.liveBoardType}>{type}</span>}
+        <span className={`${styles.liveBoardDelay} ${delayed ? styles.liveBoardDelayed : ''}`}>
+          {delayed ? t.liveBoard.delayed(item.DelayTime) : t.liveBoard.onTime}
+        </span>
+      </div>
+      <div className={styles.liveBoardCardBody}>
+        <span className={styles.liveBoardTime}>{time}</span>
+        <span className={styles.liveBoardCardArrow}>→</span>
+        <span className={styles.liveBoardDest}>{dest}</span>
+      </div>
     </div>
   );
 }

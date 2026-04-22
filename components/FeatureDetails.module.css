@@ -293,34 +293,61 @@
   padding-bottom: 0.25rem;
 }
 
-.liveBoardRow {
-  display: grid;
-  grid-template-columns: 2.5rem 2.5rem 2.5rem 1fr auto;
-  gap: 3px;
+/* ── Live board card ─────────────────────────────────────────────── */
+.liveBoardCard {
+  background: var(--bg-panel);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  transition: box-shadow 0.15s ease;
+}
+
+.liveBoardCard:last-child {
+  margin-bottom: 0;
+}
+
+.liveBoardCardHeader {
+  display: flex;
   align-items: center;
-  font-size: 0.72rem;
-  padding: 3px 0;
-  border-bottom: 1px solid rgba(128,128,128,0.07);
-  overflow: hidden;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.liveBoardCardBody {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.liveBoardCardArrow {
+  color: rgba(128, 128, 128, 0.6);
+  font-size: 0.75rem;
 }
 
 .liveBoardTrainNo {
   font-weight: 700;
+  font-size: 0.85rem;
   color: var(--accent);
   white-space: nowrap;
 }
 
 .liveBoardType {
-  color: #888;
+  font-size: 0.72rem;
+  color: var(--text-panel-secondary);
+  background: rgba(128, 128, 128, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .liveBoardTime {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 0.9rem;
   color: var(--text-panel);
   white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 
 .liveBoardDest {
@@ -328,13 +355,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.82rem;
 }
 
 .liveBoardDelay {
+  margin-left: auto;
   white-space: nowrap;
   color: var(--accent);
   font-weight: 500;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
 }
 
 .liveBoardDelayed {
