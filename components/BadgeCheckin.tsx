@@ -24,9 +24,10 @@ export default function BadgeCheckin({ user, onSuccess, onToast, onDismissToast 
   const handleCheckin = async () => {
     setLoading(true);
     const loadingToastId = onToast?.(t.checkin.checking, 'loading');
+    const dismissLoading = () => { if (loadingToastId) onDismissToast?.(loadingToastId); };
     try {
       if (!navigator.geolocation) {
-        onDismissToast?.(loadingToastId!);
+        dismissLoading();
         onToast?.(t.checkin.noGeo, 'error');
         return;
       }
@@ -43,7 +44,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast, onDismissToast 
       });
 
       if (rpcErr) {
-        onDismissToast?.(loadingToastId!);
+        dismissLoading();
         onToast?.(rpcErr.message ?? t.checkin.fail, 'error');
         return;
       }
@@ -51,19 +52,19 @@ export default function BadgeCheckin({ user, onSuccess, onToast, onDismissToast 
       const result = rpcData as any;
 
       if (!result.ok) {
-        onDismissToast?.(loadingToastId!);
+        dismissLoading();
         onToast?.(t.checkin.outOfRange, 'error');
         return;
       }
 
       if (result.already_unlocked) {
         const d = new Date(result.unlocked_at);
-        onDismissToast?.(loadingToastId!);
+        dismissLoading();
         onToast?.(t.checkin.alreadyCheckedIn(result.station_name, `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`), 'info');
         return;
       }
 
-      onDismissToast?.(loadingToastId!);
+      dismissLoading();
       if (typeof onSuccess === 'function') {
         onSuccess({
           station_id: result.station_id,
@@ -72,7 +73,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast, onDismissToast 
         });
       }
     } catch (e: any) {
-      onDismissToast?.(loadingToastId!);
+      dismissLoading();
       if (e && e.code === 1) {
         onToast?.(t.checkin.permissionDenied, 'error');
       } else {
