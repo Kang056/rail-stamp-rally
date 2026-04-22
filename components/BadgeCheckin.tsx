@@ -10,9 +10,10 @@ type Props = {
   user: User | null;
   onSuccess?: (result: { station_id: string; station_name: string; badge_image_url: string | null }) => void;
   onToast?: (message: string, type: 'success' | 'error' | 'info' | 'loading') => string;
+  onDismissToast?: (id: string) => void;
 };
 
-export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
+export default function BadgeCheckin({ user, onSuccess, onToast, onDismissToast }: Props) {
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
 
@@ -22,8 +23,10 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
 
   const handleCheckin = async () => {
     setLoading(true);
+    const loadingToastId = onToast?.(t.checkin.checking, 'loading');
     try {
       if (!navigator.geolocation) {
+        onDismissToast?.(loadingToastId!);
         onToast?.(t.checkin.noGeo, 'error');
         return;
       }
@@ -40,6 +43,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
       });
 
       if (rpcErr) {
+        onDismissToast?.(loadingToastId!);
         onToast?.(rpcErr.message ?? t.checkin.fail, 'error');
         return;
       }
@@ -47,16 +51,19 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
       const result = rpcData as any;
 
       if (!result.ok) {
+        onDismissToast?.(loadingToastId!);
         onToast?.(t.checkin.outOfRange, 'error');
         return;
       }
 
       if (result.already_unlocked) {
         const d = new Date(result.unlocked_at);
+        onDismissToast?.(loadingToastId!);
         onToast?.(t.checkin.alreadyCheckedIn(result.station_name, `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`), 'info');
         return;
       }
 
+      onDismissToast?.(loadingToastId!);
       if (typeof onSuccess === 'function') {
         onSuccess({
           station_id: result.station_id,
@@ -65,6 +72,7 @@ export default function BadgeCheckin({ user, onSuccess, onToast }: Props) {
         });
       }
     } catch (e: any) {
+      onDismissToast?.(loadingToastId!);
       if (e && e.code === 1) {
         onToast?.(t.checkin.permissionDenied, 'error');
       } else {

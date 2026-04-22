@@ -23,10 +23,6 @@
 }
 
 .handle {
-  width: 36px;
-  height: 4px;
-  background: var(--border-panel);
-  border-radius: 2px;
   flex-shrink: 0;
 }
 

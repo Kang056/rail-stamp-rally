@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import BottomSheet from './BottomSheet';
-import AccountSettings from './AccountSettings';
 import { useIsMobile } from '@/lib/useIsMobile';
 import { useTranslation } from '@/lib/i18n';
 import styles from './AuthButton.module.css';
@@ -21,6 +20,8 @@ interface AuthButtonProps {
   onOpenBadgeCollection?: () => void;
   /** Open the check-in records drawer */
   onOpenCheckinRecords?: () => void;
+  /** Open system settings */
+  onOpenSettings?: () => void;
   /** Whether the user is considered logged in (real or mock) */
   isLoggedIn?: boolean;
   /** Level and XP info for the current user */
@@ -33,6 +34,7 @@ export default function AuthButton({
   onMockLoginToggle,
   onOpenBadgeCollection,
   onOpenCheckinRecords,
+  onOpenSettings,
   isLoggedIn = false,
   levelInfo,
 }: AuthButtonProps) {
@@ -193,15 +195,25 @@ export default function AuthButton({
               </button>
             )}
 
+            {/* System settings */}
+            {onOpenSettings && (
+              <button
+                className={styles.accountActionBtn}
+                onClick={() => {
+                  setDrawerOpen(false);
+                  onOpenSettings();
+                }}
+              >
+                {t.account.systemSettings}
+              </button>
+            )}
+
             {/* Logout */}
             {user && (
               <button onClick={handleSignOut} className={styles.logoutBtn}>
                 {t.common.signOut}
               </button>
             )}
-
-            {/* Settings */}
-            <AccountSettings />
           </div>
         </BottomSheet>
       )}
