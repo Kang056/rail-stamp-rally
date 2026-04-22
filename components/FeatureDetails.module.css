@@ -7,6 +7,24 @@
   overflow-y: auto;
 }
 
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  color: var(--text-panel-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  margin-bottom: 0.75rem;
+  transition: color 0.15s ease;
+}
+
+.backBtn:hover {
+  color: var(--text-panel);
+}
+
 .closeButton {
   position: absolute;
   top: 0.5rem;

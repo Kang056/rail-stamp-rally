@@ -67,6 +67,7 @@ export default function HomePage() {
   const [newBadgeStationId, setNewBadgeStationId] = useState<string | null>(null);
   const [mobileProgressOpen, setMobileProgressOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const [mobileAccountOpen, setMobileAccountOpen] = useState(false);
   const [mockLogin, setMockLogin] = useState(false);
   const [visibleSystems, setVisibleSystems] = useState<Set<string>>(
     () => new Set(Object.keys(SYSTEM_LABELS))
@@ -612,6 +613,7 @@ export default function HomePage() {
               <FeatureDetails
                 feature={null}
                 onClose={() => setDesktopPanel('account')}
+                onBack={() => setDesktopPanel('account')}
                 collectedBadges={collectedBadgesMap}
                 stationCountsBySystem={stationCountsBySystem}
                 collectedCountsBySystem={collectedCountsBySystem}
@@ -629,6 +631,7 @@ export default function HomePage() {
               <CheckinRecordsPanel
                 checkinCount={checkinCount}
                 t={t}
+                onBack={() => setDesktopPanel('account')}
               />
             </div>
           )}
@@ -636,7 +639,7 @@ export default function HomePage() {
           {/* System settings */}
           {desktopPanel === 'settings' && (
             <div className={styles.panelContent}>
-              <AccountSettings />
+              <AccountSettings onBack={() => setDesktopPanel('account')} />
             </div>
           )}
         </aside>
@@ -713,6 +716,8 @@ export default function HomePage() {
               }}
               isLoggedIn={isLoggedIn}
               levelInfo={isLoggedIn ? levelInfo : undefined}
+              accountDrawerOpen={mobileAccountOpen}
+              onAccountDrawerOpenChange={setMobileAccountOpen}
             />
           </div>
 
@@ -763,6 +768,7 @@ export default function HomePage() {
           <FeatureDetails
             feature={null}
             onClose={() => setMobileProgressOpen(false)}
+            onBack={() => { setMobileProgressOpen(false); setMobileAccountOpen(true); }}
             collectedBadges={collectedBadgesMap}
             stationCountsBySystem={stationCountsBySystem}
             collectedCountsBySystem={collectedCountsBySystem}
@@ -830,6 +836,7 @@ export default function HomePage() {
           <CheckinRecordsPanel
             checkinCount={checkinCount}
             t={t}
+            onBack={() => { setMobileCheckinOpen(false); setMobileAccountOpen(true); }}
           />
         </BottomSheet>
       )}
@@ -842,7 +849,7 @@ export default function HomePage() {
           title={t.account.systemSettings}
           defaultSnap={1}
         >
-          <AccountSettings />
+          <AccountSettings onBack={() => { setMobileSettingsOpen(false); setMobileAccountOpen(true); }} />
         </BottomSheet>
       )}
 

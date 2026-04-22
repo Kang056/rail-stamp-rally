@@ -2,6 +2,7 @@ const zhTW = {
   common: {
     loading: '載入中…',
     close: '關閉',
+    back: '返回',
     signIn: '使用 Google 登入',
     signOut: '登出',
     confirm: '確認',

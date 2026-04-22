@@ -4,6 +4,7 @@ const en = {
   common: {
     loading: 'Loading…',
     close: 'Close',
+    back: 'Back',
     signIn: 'Sign in with Google',
     signOut: 'Sign out',
     confirm: 'Confirm',

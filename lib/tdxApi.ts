@@ -20,7 +20,7 @@ export interface LiveBoardItem {
   ScheduledArrivalTime: string;
   ScheduledDepartureTime: string;
   DelayTime: number;
-  DestinationStationName: { Zh_tw: string; En: string };
+  DestinationStationName?: { Zh_tw: string; En: string };
 }
 
 /** Fetch all current live train delays → Map of TrainNo → DelayTime (minutes) */

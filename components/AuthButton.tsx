@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import type { User } from '@supabase/supabase-js';
 import BottomSheet from './BottomSheet';
@@ -26,6 +26,10 @@ interface AuthButtonProps {
   isLoggedIn?: boolean;
   /** Level and XP info for the current user */
   levelInfo?: import('@/lib/levelSystem').LevelInfo;
+  /** Controlled open state for the account drawer */
+  accountDrawerOpen?: boolean;
+  /** Callback when the account drawer open state changes */
+  onAccountDrawerOpenChange?: (open: boolean) => void;
 }
 
 export default function AuthButton({
@@ -37,14 +41,22 @@ export default function AuthButton({
   onOpenSettings,
   isLoggedIn = false,
   levelInfo,
+  accountDrawerOpen,
+  onAccountDrawerOpenChange,
 }: AuthButtonProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const drawerOpen = accountDrawerOpen ?? internalOpen;
   const isMobile = useIsMobile();
   const onAuthChangeRef = useRef(onAuthChange);
   onAuthChangeRef.current = onAuthChange;
   const { t } = useTranslation();
+
+  const setDrawerOpen = useCallback((v: boolean) => {
+    setInternalOpen(v);
+    onAccountDrawerOpenChange?.(v);
+  }, [onAccountDrawerOpenChange]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

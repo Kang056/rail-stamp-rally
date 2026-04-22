@@ -18,7 +18,7 @@ const THEME_COLOR_KEYS: ThemeColor[] = ['default', 'blue', 'green', 'orange', 'r
 
 const LOCALE_OPTIONS: LocaleCode[] = ['zh-TW', 'en'];
 
-export default function AccountSettings() {
+export default function AccountSettings({ onBack }: { onBack?: () => void }) {
   const { t, locale, setLocale } = useTranslation();
   const { colorMode, themeColor, setColorMode, setThemeColor } = useTheme();
 
@@ -35,6 +35,11 @@ export default function AccountSettings() {
 
   return (
     <div className={styles.settings}>
+      {onBack && (
+        <button className={styles.backBtn} onClick={onBack} type="button">
+          ← {t.common.back}
+        </button>
+      )}
       <p className={styles.settingsTitle}>{t.account.settings.title}</p>
 
       {/* Appearance: light / dark */}

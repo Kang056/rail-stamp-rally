@@ -15,6 +15,8 @@ interface FeatureDetailsProps {
   feature: RailwayFeatureProperties | null;
   /** Called when the user dismisses the details panel */
   onClose: () => void;
+  /** Called when the back button is pressed (returns to account dialog) */
+  onBack?: () => void;
   /** Collected badges keyed by station_id */
   collectedBadges?: Map<string, { unlocked_at: string; badge_image_url: string | null }>;
   /** Total station counts per system type */
@@ -104,7 +106,6 @@ function StationLiveBoard({ stationId }: { stationId: string }) {
 
 function LiveBoardRow({ item }: { item: LiveBoardItem }) {
   const time = item.ScheduledDepartureTime || item.ScheduledArrivalTime || '-';
-  const dest = item.DestinationStationName?.Zh_tw ?? '-';
   const type = item.TrainTypeName?.Zh_tw ?? '';
   const delayed = item.DelayTime > 0;
   const { t } = useTranslation();
@@ -120,8 +121,6 @@ function LiveBoardRow({ item }: { item: LiveBoardItem }) {
       </div>
       <div className={styles.liveBoardCardBody}>
         <span className={styles.liveBoardTime}>{time}</span>
-        <span className={styles.liveBoardCardArrow}>→</span>
-        <span className={styles.liveBoardDest}>{dest}</span>
       </div>
     </div>
   );
@@ -245,11 +244,16 @@ function LineDetail({ line }: { line: LineProperties }) {
 // Renders detail content; layout (bottom-sheet vs sidebar) is handled by the
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FeatureDetails({ feature, onClose, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem, showStations, onToggleStations }: FeatureDetailsProps) {
+export default function FeatureDetails({ feature, onClose, onBack, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem, showStations, onToggleStations }: FeatureDetailsProps) {
   const { t } = useTranslation();
   if (!feature) {
     return (
       <div className={styles.empty}>
+        {onBack && (
+          <button className={styles.backBtn} onClick={onBack} type="button">
+            ← {t.common.back}
+          </button>
+        )}
         <div className={styles.stationToggleRow}>
           <div className={styles.stationToggleLabel}>{t.progress.stationDisplay}</div>
           {onToggleStations && (

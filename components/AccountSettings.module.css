@@ -3,9 +3,26 @@
 .settings {
   width: 100%;
   padding: 0.75rem 0;
-  border-top: 1px solid var(--border-panel);
-  margin-top: 0.5rem;
   max-width: 240px;
+  margin: 0 auto;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  color: var(--text-panel-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  margin-bottom: 0.5rem;
+  transition: color 0.15s ease;
+}
+
+.backBtn:hover {
+  color: var(--text-panel);
 }
 
 .settingsTitle {

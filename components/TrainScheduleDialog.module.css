@@ -8,7 +8,7 @@
   font-size: 1.1rem;
   font-weight: 700;
   margin: 0 0 0.75rem;
-  color: #111;
+  color: var(--text-panel);
 }
 
 /* ── Step indicator ─────────────────────────────────────────────── */
@@ -30,7 +30,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ddd;
+  background: rgba(128, 128, 128, 0.35);
   transition: background 0.2s ease, transform 0.2s ease;
 }
 
@@ -53,7 +53,7 @@
   margin: 0;
   font-size: 0.82rem;
   font-weight: 500;
-  color: #0e7490;
+  color: var(--accent);
   line-height: 1.4;
 }
 
@@ -65,25 +65,25 @@
   display: block;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #555;
+  color: var(--text-panel-secondary);
   margin-bottom: 0.25rem;
 }
 
 .pickerBtn {
   width: 100%;
   padding: 10px 12px;
-  background: #f7f7f7;
-  border: 1.5px solid #ddd;
+  background: var(--bg-panel-content);
+  border: 1.5px solid var(--border-panel);
   border-radius: 8px;
   font-size: 0.9rem;
-  color: #333;
+  color: var(--text-panel);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .pickerBtn:hover {
-  border-color: #aaa;
+  border-color: var(--text-panel-secondary);
 }
 
 .pickerBtnActive {
@@ -106,11 +106,11 @@
 .stationSelectInput {
   width: 100%;
   padding: 10px 32px 10px 12px;
-  background: #f7f7f7;
-  border: 1.5px solid #ddd;
+  background: var(--bg-panel-content);
+  border: 1.5px solid var(--border-panel);
   border-radius: 8px;
   font-size: 0.9rem;
-  color: #333;
+  color: var(--text-panel);
   outline: none;
   transition: border-color 0.15s ease;
   box-sizing: border-box;
@@ -121,7 +121,7 @@
 }
 
 .stationSelectInput::placeholder {
-  color: #aaa;
+  color: var(--text-panel-secondary);
 }
 
 .stationSelectClear {
@@ -131,7 +131,7 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #999;
+  color: var(--text-panel-secondary);
   font-size: 1rem;
   cursor: pointer;
   padding: 2px 4px;
@@ -139,7 +139,7 @@
 }
 
 .stationSelectClear:hover {
-  color: #555;
+  color: var(--text-panel);
 }
 
 .stationDropdown {
@@ -148,13 +148,13 @@
   right: 0;
   top: 100%;
   margin-top: 2px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--bg-panel-content);
+  border: 1px solid var(--border-panel);
   border-radius: 8px;
   max-height: 200px;
   overflow-y: auto;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   list-style: none;
   padding: 4px 0;
 }
@@ -162,14 +162,14 @@
 .stationDropdownItem {
   padding: 8px 12px;
   font-size: 0.88rem;
-  color: #333;
+  color: var(--text-panel);
   cursor: pointer;
   transition: background 0.1s ease;
 }
 
 .stationDropdownItem:hover {
   background: rgba(32, 184, 212, 0.1);
-  color: #0e7490;
+  color: var(--accent);
 }
 
 /* Time section: slightly dimmed until step 3 */
@@ -196,11 +196,11 @@
 .timeInput {
   width: 100%;
   padding: 8px 10px;
-  border: 1.5px solid #ddd;
+  border: 1.5px solid var(--border-panel);
   border-radius: 8px;
   font-size: 0.9rem;
-  color: #333;
-  background: #f7f7f7;
+  color: var(--text-panel);
+  background: var(--bg-panel-content);
 }
 
 .timeInput:focus {
@@ -227,14 +227,15 @@
 }
 
 .queryBtn:disabled {
-  background: #ccc;
+  background: rgba(128, 128, 128, 0.25);
+  color: var(--text-panel-secondary);
   cursor: not-allowed;
 }
 
 .error {
   margin-top: 0.75rem;
-  background: rgba(255, 235, 235, 0.96);
-  color: #800;
+  background: rgba(200, 50, 50, 0.15);
+  color: #ff7070;
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 0.82rem;
@@ -244,7 +245,7 @@
 .noResult {
   margin-top: 0.75rem;
   text-align: center;
-  color: #888;
+  color: var(--text-panel-secondary);
   font-size: 0.88rem;
 }
 
@@ -257,15 +258,15 @@
 }
 
 .resultCard {
-  background: #f9f9fb;
-  border: 1px solid #e8e8ee;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-panel);
   border-radius: 10px;
   padding: 10px 12px;
   transition: box-shadow 0.15s ease;
 }
 
 .resultCard:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
 
 .cardHeader {
@@ -283,8 +284,8 @@
 
 .trainType {
   font-size: 0.78rem;
-  color: #555;
-  background: #eef8fa;
+  color: var(--text-panel-secondary);
+  background: var(--accent-light);
   padding: 2px 8px;
   border-radius: 4px;
   font-weight: 500;
@@ -318,20 +319,20 @@
 
 .cardTimeLabel {
   font-size: 0.68rem;
-  color: #999;
+  color: var(--text-panel-secondary);
   font-weight: 500;
 }
 
 .cardTimeValue {
   font-size: 1.05rem;
   font-weight: 700;
-  color: #222;
+  color: var(--text-panel);
   letter-spacing: 0.02em;
 }
 
 .cardArrow {
   font-size: 1rem;
-  color: #bbb;
+  color: var(--text-panel-secondary);
   margin-top: 10px;
 }
 
@@ -339,7 +340,7 @@
   display: flex;
   gap: 12px;
   font-size: 0.78rem;
-  color: #777;
+  color: var(--text-panel-secondary);
 }
 
 .cardMetaItem {
