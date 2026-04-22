@@ -27,6 +27,7 @@ const en = {
     closeMockLogin: 'Disable Mock Login',
     mockLoginOn: 'Mock login enabled',
     mockLoginOff: 'Mock login disabled',
+    systemSettings: 'System Settings',
     settings: {
       title: 'Settings',
       theme: 'Appearance',
@@ -60,6 +61,7 @@ const en = {
   checkin: {
     label: 'Check In',
     ariaLabel: 'Check In',
+    checking: 'Checking in…',
     noGeo: 'Geolocation is not supported by your browser',
     fail: 'Check-in failed',
     outOfRange: 'Check-in failed! Not within station range.',

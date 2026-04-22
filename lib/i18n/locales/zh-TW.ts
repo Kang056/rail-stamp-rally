@@ -25,6 +25,7 @@ const zhTW = {
     closeMockLogin: '關閉模擬登入',
     mockLoginOn: '模擬登入已開啟',
     mockLoginOff: '模擬登入已關閉',
+    systemSettings: '系統設定',
     settings: {
       title: '設定',
       theme: '外觀',
@@ -58,6 +59,7 @@ const zhTW = {
   checkin: {
     label: '打卡',
     ariaLabel: '打卡',
+    checking: '正在打卡中…',
     noGeo: '您的瀏覽器不支援地理定位',
     fail: '打卡失敗',
     outOfRange: '打卡失敗！未在車站範圍內',

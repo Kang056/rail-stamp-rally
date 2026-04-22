@@ -23,10 +23,8 @@
 }
 
 .handle {
-  width: 36px;
-  height: 4px;
-  background: var(--border-panel);
-  border-radius: 2px;
+  /* Vaul's Drawer.Handle provides its own visual styling (background, dimensions).
+     flex-shrink: 0 prevents the handle bar from being compressed by flexbox layout. */
   flex-shrink: 0;
 }
 

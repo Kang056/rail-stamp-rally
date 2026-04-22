@@ -48,7 +48,7 @@ const LeafletMap = dynamic(() => import('@/components/Map'), {
   loading: MapLoadingFallback,
 });
 // ── Types ─────────────────────────────────────────────────────────────────────
-type DesktopPanelType = 'details' | 'account' | 'progress' | 'checkin' | null;
+type DesktopPanelType = 'details' | 'account' | 'progress' | 'checkin' | 'settings' | null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page component
@@ -66,6 +66,7 @@ export default function HomePage() {
   const [collectedBadgesMap, setCollectedBadgesMap] = useState<Map<string, { unlocked_at: string; badge_image_url: string | null }>>(new Map());
   const [newBadgeStationId, setNewBadgeStationId] = useState<string | null>(null);
   const [mobileProgressOpen, setMobileProgressOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const [mockLogin, setMockLogin] = useState(false);
   const [visibleSystems, setVisibleSystems] = useState<Set<string>>(
     () => new Set(Object.keys(SYSTEM_LABELS))
@@ -102,6 +103,8 @@ export default function HomePage() {
   // Map ref for flyTo (focus button)
   const mapFlyToRef = useRef<((lat: number, lng: number, zoom: number) => void) | null>(null);
   const prevUserRef = useRef<User | null>(null);
+  // Tracks how many initial data loads are still pending after login (to suppress level-up animation)
+  const pendingInitialLoadsRef = useRef(0);
   // Ref to access latest geojson inside callbacks without re-creating them
   const geojsonRef = useRef<any>(null);
 
@@ -240,17 +243,30 @@ export default function HomePage() {
   }, [fetchGeo]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      pendingInitialLoadsRef.current = 0;
+      prevLevelRef.current = null;
+      return;
+    }
     upsertProfile(user);
+    // Mark two pending loads; level-up animation is suppressed until both finish
+    pendingInitialLoadsRef.current = 2;
     getUserCollectedBadges(user.id).then((badges) => {
       const ids = new Set(badges.map((b) => b.station_id));
       const map = new Map(badges.map((b) => [b.station_id, { unlocked_at: b.unlocked_at, badge_image_url: b.badge_image_url }]));
       setCollectedStationIds(ids);
       setCollectedBadgesMap(map);
+      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
     }).catch((err) => {
       console.error('Failed to fetch user badges:', err);
+      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
     });
-    getUserCheckinCount(user.id).then(setCheckinCount).catch(() => {});
+    getUserCheckinCount(user.id).then((count) => {
+      setCheckinCount(count);
+      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
+    }).catch(() => {
+      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
+    });
   }, [user]);
 
   const stationCountsBySystem = useMemo(() => {
@@ -294,11 +310,16 @@ export default function HomePage() {
   );
   const levelInfo: LevelInfo = useMemo(() => getLevelInfo(totalXp), [totalXp]);
 
-  // Level-up animation
+  // Level-up animation — only trigger on real level-ups (not initial badge data load on login)
   const [showLevelUp, setShowLevelUp] = useState(false);
   const prevLevelRef = useRef<number | null>(null);
   useEffect(() => {
-    if (prevLevelRef.current !== null && levelInfo.level > prevLevelRef.current) {
+    if (pendingInitialLoadsRef.current > 0 || prevLevelRef.current === null) {
+      // During initial data load or first render: silently track the level without animating
+      prevLevelRef.current = levelInfo.level;
+      return;
+    }
+    if (levelInfo.level > prevLevelRef.current) {
       setShowLevelUp(true);
     }
     prevLevelRef.current = levelInfo.level;
@@ -447,7 +468,7 @@ export default function HomePage() {
           {/* Checkin (visible only when logged in) */}
           {isLoggedIn && (
             <div className={styles.iconBarBtnWrap}>
-              <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} onToast={showToast} />
+              <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} onToast={showToast} onDismissToast={dismissToast} />
             </div>
           )}
 
@@ -569,13 +590,18 @@ export default function HomePage() {
                   </button>
                 )}
 
+                <button
+                  className={styles.desktopAccountBtn}
+                  onClick={() => setDesktopPanel('settings')}
+                >
+                  {t.account.systemSettings}
+                </button>
+
                 {user && (
                   <button onClick={handleDesktopSignOut} className={styles.desktopAccountLogout}>
                     {t.common.signOut}
                   </button>
                 )}
-
-                <AccountSettings />
               </div>
             </div>
           )}
@@ -604,6 +630,13 @@ export default function HomePage() {
                 checkinCount={checkinCount}
                 t={t}
               />
+            </div>
+          )}
+
+          {/* System settings */}
+          {desktopPanel === 'settings' && (
+            <div className={styles.panelContent}>
+              <AccountSettings />
             </div>
           )}
         </aside>
@@ -675,13 +708,16 @@ export default function HomePage() {
               onOpenCheckinRecords={() => {
                 setMobileCheckinOpen(true);
               }}
+              onOpenSettings={() => {
+                setMobileSettingsOpen(true);
+              }}
               isLoggedIn={isLoggedIn}
               levelInfo={isLoggedIn ? levelInfo : undefined}
             />
           </div>
 
           <div className={`${styles.toolbarItem} ${!isLoggedIn ? styles.toolbarItemHidden : ''}`}>
-            <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} onToast={showToast} />
+            <BadgeCheckin user={user} onSuccess={handleBadgeSuccess} onToast={showToast} onDismissToast={dismissToast} />
           </div>
 
           <button
@@ -795,6 +831,18 @@ export default function HomePage() {
             checkinCount={checkinCount}
             t={t}
           />
+        </BottomSheet>
+      )}
+
+      {/* ── Mobile: System Settings BottomSheet ── */}
+      {isMobile && (
+        <BottomSheet
+          open={mobileSettingsOpen}
+          onOpenChange={setMobileSettingsOpen}
+          title={t.account.systemSettings}
+          defaultSnap={1}
+        >
+          <AccountSettings />
         </BottomSheet>
       )}
 

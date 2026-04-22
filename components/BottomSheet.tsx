@@ -55,6 +55,7 @@ export default function BottomSheet({
       activeSnapPoint={activeSnap}
       setActiveSnapPoint={setActiveSnap}
       fadeFromIndex={1}
+      disablePreventScroll={false}
     >
       <Drawer.Portal>
         {modal && <Drawer.Overlay className={styles.overlay} />}
@@ -63,7 +64,7 @@ export default function BottomSheet({
             {title}
           </Drawer.Title>
           <div className={styles.header}>
-            <div className={styles.handle} aria-hidden="true" />
+            <Drawer.Handle className={styles.handle} aria-hidden="true" />
             <Drawer.Close asChild>
               <button className={styles.closeBtn} aria-label="關閉">✕</button>
             </Drawer.Close>
