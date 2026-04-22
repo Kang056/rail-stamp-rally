@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useRef } from 'react';
+
 import type { Map as LeafletMap } from 'leaflet';
 import type { FeatureCollection, Geometry } from 'geojson';
 import type { RailwayFeatureProperties, LineProperties } from '@/lib/supabaseClient';
@@ -35,6 +36,8 @@ interface MapProps {
   showStations?: boolean;
   /** Called once when the map is ready, exposes flyTo(lat, lng, zoom) for external control */
   onMapReady?: (flyTo: (lat: number, lng: number, zoom: number) => void) => void;
+  /** User's current location to show as a marker on the map */
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,7 +117,8 @@ function addFilmstripPolyline(
 // ─────────────────────────────────────────────────────────────────────────────
 // MapComponent
 // ─────────────────────────────────────────────────────────────────────────────
-export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId, visibleSystems, showStations = true, onMapReady }: MapProps) {
+export default function MapComponent({ geojson, onFeatureClick, showAllBadges = false, collectedStationIds, newBadgeStationId, visibleSystems, showStations = true, onMapReady, userLocation }: MapProps) {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const initializingRef = useRef(false);
@@ -137,6 +141,10 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
   visibleSystemsRef.current = visibleSystems;
   showStationsRef.current = showStations;
   onMapReadyRef.current = onMapReady;
+
+  const userLocationRef = useRef(userLocation);
+  userLocationRef.current = userLocation;
+  const userMarkerRef = useRef<any>(null);
 
   // Stable callback that always routes to the latest onFeatureClick via ref.
   // This prevents stale closures inside Leaflet click handlers which are created
@@ -311,6 +319,68 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geojson, showAllBadges, collectedStationIds, newBadgeStationId, visibleSystems, showStations]);
+
+  // Update user location marker on the map
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    import('leaflet').then((L) => {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+
+      if (!userLocation) return;
+
+      const pulseIcon = L.divIcon({
+        className: '',
+        html: `
+          <div style="position:relative;width:20px;height:20px;">
+            <div style="
+              position:absolute;top:50%;left:50%;
+              transform:translate(-50%,-50%);
+              width:14px;height:14px;
+              border-radius:50%;
+              background:#2563eb;
+              border:2.5px solid #fff;
+              box-shadow:0 1px 4px rgba(0,0,0,0.4);
+            "></div>
+            <div style="
+              position:absolute;top:50%;left:50%;
+              transform:translate(-50%,-50%);
+              width:28px;height:28px;
+              border-radius:50%;
+              background:rgba(37,99,235,0.2);
+              animation:userLocPulse 2s ease-out infinite;
+            "></div>
+          </div>
+        `,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+
+      if (!document.querySelector('style[data-user-loc]')) {
+        const style = document.createElement('style');
+        style.setAttribute('data-user-loc', 'true');
+        style.textContent = `
+          @keyframes userLocPulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      const marker = L.marker([userLocation.lat, userLocation.lng], {
+        icon: pulseIcon,
+        zIndexOffset: 1000,
+        interactive: false,
+      }).addTo(map);
+
+      userMarkerRef.current = marker;
+    });
+  }, [userLocation]);
 
   return (
     <div

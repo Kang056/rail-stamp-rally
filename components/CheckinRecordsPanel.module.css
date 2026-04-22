@@ -1,3 +1,11 @@
+/* CheckinRecordsPanel.module.css */
+
+.container {
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+/* Back button */
 .backBtn {
   display: flex;
   align-items: center;
@@ -8,23 +16,62 @@
   font-size: 0.82rem;
   cursor: pointer;
   padding: 0.25rem 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   transition: color 0.15s ease;
 }
 
 .backBtn:hover {
   color: var(--text-panel);
 }
-.container {
-  padding: 0.75rem 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+
+/* Section title */
+.panelTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-panel);
+  margin: 0 0 1rem;
 }
 
-.totalCount {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-panel);
-  margin: 0;
+/* Stats card */
+.statsCard {
+  background: var(--bg-panel);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statsIcon {
+  font-size: 1.75rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.statsInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.statsCount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.2;
+}
+
+.statsLabel {
+  font-size: 0.78rem;
+  color: var(--text-panel-secondary);
+}
+
+/* Empty state */
+.emptyState {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--text-panel-secondary);
+  font-size: 0.88rem;
 }

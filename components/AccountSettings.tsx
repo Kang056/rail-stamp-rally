@@ -42,60 +42,62 @@ export default function AccountSettings({ onBack }: { onBack?: () => void }) {
       )}
       <p className={styles.settingsTitle}>{t.account.settings.title}</p>
 
-      {/* Appearance: light / dark */}
-      <div className={styles.settingRow}>
-        <span className={styles.settingLabel}>{t.account.settings.theme}</span>
-        <div className={styles.segmentedControl}>
-          <button
-            className={`${styles.segmentBtn} ${colorMode === 'light' ? styles.segmentBtnActive : ''}`}
-            onClick={() => setColorMode('light')}
-            type="button"
-          >
-            ☀️ {t.account.settings.themeLight}
-          </button>
-          <button
-            className={`${styles.segmentBtn} ${colorMode === 'dark' ? styles.segmentBtnActive : ''}`}
-            onClick={() => setColorMode('dark')}
-            type="button"
-          >
-            🌙 {t.account.settings.themeDark}
-          </button>
-        </div>
-      </div>
-
-      {/* Theme color */}
-      <div className={styles.settingRow}>
-        <span className={styles.settingLabel}>{t.account.settings.themeColor}</span>
-        <div className={styles.colorPicker}>
-          {THEME_COLOR_KEYS.map((c) => (
+      <div className={styles.settingSection}>
+        {/* Appearance: light / dark */}
+        <div className={styles.settingRow}>
+          <span className={styles.settingLabel}>{t.account.settings.theme}</span>
+          <div className={styles.segmentedControl}>
             <button
-              key={c}
-              className={`${styles.colorSwatch} ${themeColor === c ? styles.colorSwatchActive : ''}`}
-              style={{ background: THEME_COLOR_HEX[c] }}
-              onClick={() => setThemeColor(c)}
-              type="button"
-              title={colorLabel(c)}
-              aria-label={colorLabel(c)}
-              aria-pressed={themeColor === c}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Language */}
-      <div className={styles.settingRow}>
-        <span className={styles.settingLabel}>{t.account.settings.language}</span>
-        <div className={styles.segmentedControl}>
-          {LOCALE_OPTIONS.map((code) => (
-            <button
-              key={code}
-              className={`${styles.segmentBtn} ${locale === code ? styles.segmentBtnActive : ''}`}
-              onClick={() => setLocale(code)}
+              className={`${styles.segmentBtn} ${colorMode === 'light' ? styles.segmentBtnActive : ''}`}
+              onClick={() => setColorMode('light')}
               type="button"
             >
-              {t.languages[code]}
+              ☀️ {t.account.settings.themeLight}
             </button>
-          ))}
+            <button
+              className={`${styles.segmentBtn} ${colorMode === 'dark' ? styles.segmentBtnActive : ''}`}
+              onClick={() => setColorMode('dark')}
+              type="button"
+            >
+              🌙 {t.account.settings.themeDark}
+            </button>
+          </div>
+        </div>
+
+        {/* Theme color */}
+        <div className={styles.settingRow}>
+          <span className={styles.settingLabel}>{t.account.settings.themeColor}</span>
+          <div className={styles.colorPicker}>
+            {THEME_COLOR_KEYS.map((c) => (
+              <button
+                key={c}
+                className={`${styles.colorSwatch} ${themeColor === c ? styles.colorSwatchActive : ''}`}
+                style={{ background: THEME_COLOR_HEX[c] }}
+                onClick={() => setThemeColor(c)}
+                type="button"
+                title={colorLabel(c)}
+                aria-label={colorLabel(c)}
+                aria-pressed={themeColor === c}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Language */}
+        <div className={styles.settingRow}>
+          <span className={styles.settingLabel}>{t.account.settings.language}</span>
+          <div className={styles.segmentedControl}>
+            {LOCALE_OPTIONS.map((code) => (
+              <button
+                key={code}
+                className={`${styles.segmentBtn} ${locale === code ? styles.segmentBtnActive : ''}`}
+                onClick={() => setLocale(code)}
+                type="button"
+              >
+                {t.languages[code]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

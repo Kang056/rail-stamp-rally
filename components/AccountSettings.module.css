@@ -2,11 +2,10 @@
 
 .settings {
   width: 100%;
-  padding: 0.75rem 0;
-  max-width: 240px;
-  margin: 0 auto;
+  padding: 0.5rem 0;
 }
 
+/* Back button — matches FeatureDetails pattern */
 .backBtn {
   display: flex;
   align-items: center;
@@ -17,7 +16,7 @@
   font-size: 0.82rem;
   cursor: pointer;
   padding: 0.25rem 0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
   transition: color 0.15s ease;
 }
 
@@ -25,50 +24,66 @@
   color: var(--text-panel);
 }
 
+/* Section title — matches progressTitle */
 .settingsTitle {
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: var(--text-panel-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0 0 0.75rem;
+  color: var(--text-panel);
+  margin: 0 0 1rem;
 }
 
-.settingRow {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+/* Setting section card */
+.settingSection {
+  background: var(--bg-panel);
+  border: 1px solid rgba(128, 128, 128, 0.15);
+  border-radius: 10px;
+  padding: 12px 14px;
   margin-bottom: 0.75rem;
 }
 
+/* Row inside a section */
+.settingRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settingRow + .settingRow {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.1);
+}
+
 .settingLabel {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-panel);
 }
 
+/* Segmented control buttons */
 .segmentedControl {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .segmentBtn {
   flex: 1;
-  padding: 5px 8px;
+  padding: 7px 10px;
   background: none;
   border: 1px solid var(--border-panel);
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border-radius: 7px;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-panel);
   cursor: pointer;
   transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
   white-space: nowrap;
   line-height: 1.4;
+  text-align: center;
 }
 
 .segmentBtn:hover {
-  background: rgba(128, 128, 128, 0.1);
+  background: rgba(128, 128, 128, 0.08);
 }
 
 .segmentBtnActive {
@@ -78,18 +93,19 @@
   font-weight: 600;
 }
 
+/* Color swatch picker */
 .colorPicker {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
 .colorSwatch {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  border: 2px solid transparent;
+  border: 2.5px solid transparent;
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   padding: 0;

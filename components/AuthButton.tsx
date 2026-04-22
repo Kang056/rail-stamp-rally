@@ -197,7 +197,7 @@ export default function AuthButton({
               </button>
             )}
 
-            {/* Mock login button */}
+            {/* Mock login button hidden — dev testing tool, not for production
             {onMockLoginToggle && (
               <button
                 className={`${styles.accountActionBtn} ${mockLogin ? styles.accountActionBtnActive : ''}`}
@@ -206,6 +206,7 @@ export default function AuthButton({
                 {mockLogin ? t.account.closeMockLogin : t.account.mockLogin}
               </button>
             )}
+            */}
 
             {/* System settings */}
             {onOpenSettings && (

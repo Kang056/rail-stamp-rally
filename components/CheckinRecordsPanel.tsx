@@ -17,7 +17,19 @@ export default function CheckinRecordsPanel({ checkinCount, t, onBack }: Checkin
           ← {t.common.back}
         </button>
       )}
-      <p className={styles.totalCount}>{t.progress.checkinCount(checkinCount)}</p>
+      <p className={styles.panelTitle}>{t.account.checkinRecords}</p>
+
+      <div className={styles.statsCard}>
+        <span className={styles.statsIcon}>🏁</span>
+        <div className={styles.statsInfo}>
+          <span className={styles.statsCount}>{checkinCount}</span>
+          <span className={styles.statsLabel}>{t.progress.checkinCount(checkinCount)}</span>
+        </div>
+      </div>
+
+      {checkinCount === 0 && (
+        <p className={styles.emptyState}>{'尚無打卡紀錄'}</p>
+      )}
     </div>
   );
 }

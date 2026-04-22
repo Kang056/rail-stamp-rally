@@ -22,7 +22,6 @@ import AccountSettings from '@/components/AccountSettings';
 import BottomSheet from '@/components/BottomSheet';
 import TrainScheduleDialog from '@/components/TrainScheduleDialog';
 import type { StationPickTarget } from '@/components/TrainScheduleDialog';
-import DraggableDialog from '@/components/DraggableDialog';
 import LevelUpAnimation from '@/components/LevelUpAnimation';
 import ToastContainer from '@/components/Toast';
 import type { ToastItem } from '@/components/Toast';
@@ -48,7 +47,7 @@ const LeafletMap = dynamic(() => import('@/components/Map'), {
   loading: MapLoadingFallback,
 });
 // ── Types ─────────────────────────────────────────────────────────────────────
-type DesktopPanelType = 'details' | 'account' | 'progress' | 'checkin' | 'settings' | null;
+type DesktopPanelType = 'details' | 'account' | 'progress' | 'checkin' | 'settings' | 'train' | null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page component
@@ -82,6 +81,9 @@ export default function HomePage() {
   const [stationPickTarget, setStationPickTarget] = useState<StationPickTarget>(null);
   const [pickedStation, setPickedStation] = useState<{ stationId: string; stationName: string } | null>(null);
 
+  // User geolocation for map marker
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+
   // Desktop panel state (Google Maps style)
   const [desktopPanel, setDesktopPanel] = useState<DesktopPanelType>(null);
 
@@ -104,8 +106,8 @@ export default function HomePage() {
   // Map ref for flyTo (focus button)
   const mapFlyToRef = useRef<((lat: number, lng: number, zoom: number) => void) | null>(null);
   const prevUserRef = useRef<User | null>(null);
-  // Tracks how many initial data loads are still pending after login (to suppress level-up animation)
-  const pendingInitialLoadsRef = useRef(0);
+  // True while initial badge/checkin data is loading after login — suppresses level-up animation
+  const [isInitialLoading, setIsInitialLoading] = useState(false);
   // Ref to access latest geojson inside callbacks without re-creating them
   const geojsonRef = useRef<any>(null);
 
@@ -137,8 +139,8 @@ export default function HomePage() {
   // Called by the Map component whenever the user clicks a feature
   const handleFeatureClick = useCallback((props: RailwayFeatureProperties) => {
     // If in station-picking mode for train schedule, intercept station clicks
-    // Only intercept when the train dialog is actually open
-    if (stationPickTarget && trainDialogOpen && props.feature_type === 'station') {
+    // Only intercept when the train dialog is actually open (mobile) or desktop panel is 'train'
+    if (stationPickTarget && (trainDialogOpen || desktopPanel === 'train') && props.feature_type === 'station') {
       if ((props as any).system_type === 'TRA') {
         setPickedStation({
           stationId: (props as any).station_id,
@@ -162,7 +164,7 @@ export default function HomePage() {
     } else {
       setDesktopPanel('details');
     }
-  }, [stationPickTarget, trainDialogOpen, showToast, t]);
+  }, [stationPickTarget, trainDialogOpen, desktopPanel, showToast, t]);
 
   const handleClose = useCallback(() => {
     setSheetOpen(false);
@@ -245,28 +247,33 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) {
-      pendingInitialLoadsRef.current = 0;
+      setIsInitialLoading(false);
       prevLevelRef.current = null;
       return;
     }
     upsertProfile(user);
-    // Mark two pending loads; level-up animation is suppressed until both finish
-    pendingInitialLoadsRef.current = 2;
-    getUserCollectedBadges(user.id).then((badges) => {
-      const ids = new Set(badges.map((b) => b.station_id));
-      const map = new Map(badges.map((b) => [b.station_id, { unlocked_at: b.unlocked_at, badge_image_url: b.badge_image_url }]));
-      setCollectedStationIds(ids);
-      setCollectedBadgesMap(map);
-      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
-    }).catch((err) => {
-      console.error('Failed to fetch user badges:', err);
-      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
-    });
-    getUserCheckinCount(user.id).then((count) => {
-      setCheckinCount(count);
-      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
-    }).catch(() => {
-      pendingInitialLoadsRef.current = Math.max(0, pendingInitialLoadsRef.current - 1);
+    // Signal that initial data is loading — level-up animation is fully suppressed
+    // until Promise.all resolves (both badge + checkin loads complete together)
+    setIsInitialLoading(true);
+    prevLevelRef.current = null;
+
+    const badgesP = getUserCollectedBadges(user.id)
+      .then((badges) => {
+        const ids = new Set(badges.map((b) => b.station_id));
+        const map = new Map(badges.map((b) => [b.station_id, { unlocked_at: b.unlocked_at, badge_image_url: b.badge_image_url }]));
+        setCollectedStationIds(ids);
+        setCollectedBadgesMap(map);
+      })
+      .catch((err) => { console.error('Failed to fetch user badges:', err); });
+
+    const checkinP = getUserCheckinCount(user.id)
+      .then((count) => { setCheckinCount(count); })
+      .catch(() => {});
+
+    // Only mark loading done after BOTH requests finish, preventing partial-load
+    // from setting prevLevelRef to an intermediate value
+    Promise.all([badgesP, checkinP]).finally(() => {
+      setIsInitialLoading(false);
     });
   }, [user]);
 
@@ -315,16 +322,23 @@ export default function HomePage() {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const prevLevelRef = useRef<number | null>(null);
   useEffect(() => {
-    if (pendingInitialLoadsRef.current > 0 || prevLevelRef.current === null) {
-      // During initial data load or first render: silently track the level without animating
-      prevLevelRef.current = levelInfo.level;
+    // totalXp = calculateTotalXp(collectedBadgesMap, geojson, checkinCount)
+    // All three sources must be ready before we establish a baseline level.
+    // - isInitialLoading: true while badge/checkin API calls are in-flight
+    // - !geojson: geojson loads independently; without it XP = 0, so level is artificially low.
+    //   If we initialize prevLevelRef while geojson is null, the subsequent geojson load
+    //   causes a real level jump that wrongly triggers the animation on login/refresh.
+    if (isInitialLoading || !geojson) return;
+
+    if (prevLevelRef.current === null) {
+      prevLevelRef.current = levelInfo.level; // Silent baseline — no animation
       return;
     }
     if (levelInfo.level > prevLevelRef.current) {
       setShowLevelUp(true);
     }
     prevLevelRef.current = levelInfo.level;
-  }, [levelInfo.level]);
+  }, [levelInfo.level, isInitialLoading, geojson]);
 
   // Mock login toggle
   const handleMockLoginToggle = useCallback(() => {
@@ -332,6 +346,10 @@ export default function HomePage() {
     setMockLogin(next);
     if (next && geojson) {
       showToast(t.account.mockLoginOn, 'info');
+      // Reset prevLevelRef before applying mock state so the level-up effect
+      // initializes silently (React 18 batches all setState calls below into
+      // one render, so isInitialLoading is not needed for the sync path)
+      prevLevelRef.current = null;
       const ids = new Set<string>();
       const badgesMap = new Map<string, { unlocked_at: string; badge_image_url: string | null }>();
 
@@ -392,6 +410,7 @@ export default function HomePage() {
       (pos) => {
         dismissToast(loadingId);
         const { latitude, longitude } = pos.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
         mapFlyToRef.current?.(latitude, longitude, 16);
         showToast(t.map.locateSuccess, 'success');
       },
@@ -483,12 +502,12 @@ export default function HomePage() {
             <span className={styles.iconBarLabel}>{t.map.locate}</span>
           </button>
 
-          {/* Train schedule — opens draggable floating dialog, not the sidebar panel */}
+          {/* Train schedule — opens in the sidebar panel */}
           <button
-            className={`${styles.iconBarBtn} ${trainDialogOpen ? styles.iconBarBtnActive : ''}`}
+            className={`${styles.iconBarBtn} ${desktopPanel === 'train' ? styles.iconBarBtnActive : ''}`}
             onClick={() => {
-              setTrainDialogOpen(prev => !prev);
-              if (!trainDialogOpen) {
+              toggleDesktopPanel('train');
+              if (desktopPanel !== 'train') {
                 setStationPickTarget(null);
               }
             }}
@@ -582,6 +601,7 @@ export default function HomePage() {
                   {t.account.checkinRecords}
                 </button>
 
+                {/* Mock login button hidden — dev testing tool, not for production
                 {handleMockLoginToggle && (
                   <button
                     className={`${styles.desktopAccountBtn} ${mockLogin ? styles.desktopAccountBtnActive : ''}`}
@@ -590,6 +610,7 @@ export default function HomePage() {
                     {mockLogin ? t.account.closeMockLogin : t.account.mockLogin}
                   </button>
                 )}
+                */}
 
                 <button
                   className={styles.desktopAccountBtn}
@@ -642,36 +663,28 @@ export default function HomePage() {
               <AccountSettings onBack={() => setDesktopPanel('account')} />
             </div>
           )}
+
+          {/* Train schedule panel */}
+          {desktopPanel === 'train' && (
+            <div className={styles.panelContent}>
+              <TrainScheduleDialog
+                isOpen={true}
+                pickedStation={pickedStation}
+                pickTarget={stationPickTarget}
+                onRequestPick={handleRequestPick}
+                onClose={() => {
+                  setDesktopPanel(null);
+                  setStationPickTarget(null);
+                }}
+                onToast={showToast}
+                onDismissToast={dismissToast}
+                traStations={traStations}
+              />
+            </div>
+          )}
         </aside>
       )}
 
-      {/* ── Desktop: Draggable floating train schedule dialog ── */}
-      {!isMobile && (
-        <DraggableDialog
-          isOpen={trainDialogOpen}
-          title={t.map.trainSchedule}
-          onClose={() => {
-            setTrainDialogOpen(false);
-            setStationPickTarget(null);
-          }}
-          initialX={80}
-          initialY={80}
-        >
-          <TrainScheduleDialog
-            isOpen={true}
-            pickedStation={pickedStation}
-            pickTarget={stationPickTarget}
-            onRequestPick={handleRequestPick}
-            onClose={() => {
-              setTrainDialogOpen(false);
-              setStationPickTarget(null);
-            }}
-            onToast={showToast}
-            onDismissToast={dismissToast}
-            traStations={traStations}
-          />
-        </DraggableDialog>
-      )}
 
       {/* ── Map (full screen on mobile; right panel on desktop) ── */}
       <section className={styles.mapSection} aria-label="Interactive railway map">
@@ -695,6 +708,7 @@ export default function HomePage() {
           visibleSystems={visibleSystems}
           showStations={showStations}
           onMapReady={handleMapReady}
+          userLocation={userLocation}
         />
 
         {/* ── Mobile toolbar: 帳號 → 打卡 → Focus → 班次查詢 ── */}
