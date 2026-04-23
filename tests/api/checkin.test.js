@@ -39,13 +39,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { pers
 
   console.log(`Calling RPC "${CHECKIN_RPC_NAME}" with coords lat=${lat}, lon=${lon}, user_id=${TEST_USER_ID}`);
 
-  // The RPC parameter names are implementation dependent; this script assumes
-  // the RPC accepts (user_lat, user_lon, user_id) as described in the design doc.
-  const { data, error } = await supabase.rpc(CHECKIN_RPC_NAME, {
-    user_lat: lat,
-    user_lon: lon,
-    user_id: TEST_USER_ID,
-  });
+  // The RPC parameter names are implementation dependent. Support both
+  // legacy `check_in(user_lat, user_lon, user_id)` and the project's
+  // `checkin(user_lon, user_lat, p_user_id)` signatures.
+  const rpcParams = CHECKIN_RPC_NAME === 'checkin'
+    ? { user_lon: lon, user_lat: lat, p_user_id: TEST_USER_ID }
+    : { user_lat: lat, user_lon: lon, user_id: TEST_USER_ID };
+
+  const { data, error } = await supabase.rpc(CHECKIN_RPC_NAME, rpcParams);
 
   if (error) {
     console.error('RPC call failed:', error);
@@ -82,11 +83,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { pers
   }
 
   // Call RPC again — many implementations will return an "already_unlocked" status
-  const { data: data2, error: err2 } = await supabase.rpc(CHECKIN_RPC_NAME, {
-    user_lat: lat,
-    user_lon: lon,
-    user_id: TEST_USER_ID,
-  });
+  const { data: data2, error: err2 } = await supabase.rpc(CHECKIN_RPC_NAME, rpcParams);
 
   if (err2) {
     console.error('Second RPC call failed:', err2);

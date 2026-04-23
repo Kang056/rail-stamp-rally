@@ -1,0 +1,8 @@
+
+> rail-stamp-rally@0.1.0 test
+> npx playwright test
+
+??injected env (5) from .env.local // tip: ??multiple files { path: ['.env.local', '.env'] }
+??  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217
+Skipping API checkin test: Missing required env vars.
+Required: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY, TEST_USER_ID
