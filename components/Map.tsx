@@ -74,6 +74,20 @@ function toBadgeDataUri(raw: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(raw)}`;
 }
 
+/**
+ * Escapes characters that are unsafe inside an HTML attribute value so that a
+ * database-sourced URL cannot break out of the `src="..."` context and inject
+ * arbitrary HTML / JavaScript (XSS via Leaflet divIcon html string).
+ */
+function escapeHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Filmstrip (膠捲) polyline helper
 //
@@ -240,7 +254,7 @@ export default function MapComponent({ geojson, onFeatureClick, showAllBadges = 
         ((map as any).__badgeMarkers || []).forEach(({ marker, dataUri, animClass }: any) => {
           marker.setIcon(L.divIcon({
             className: animClass || '',
-            html: `<img src="${dataUri}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
+            html: `<img src="${escapeHtmlAttr(dataUri)}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
             iconSize: [badgeSize, badgeSize],
             iconAnchor: [badgeSize / 2, badgeSize / 2],
           }));
@@ -510,7 +524,7 @@ function renderGeoJSON(
       const animClass = isNewBadge ? 'badge-new-animation' : '';
       const badgeIcon = L.divIcon({
         className: animClass,
-        html: `<img src="${dataUri}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
+        html: `<img src="${escapeHtmlAttr(dataUri)}" style="width:${badgeSize}px;height:${badgeSize}px;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.3));border-radius:50%;" alt="badge" />`,
         iconSize: [badgeSize, badgeSize],
         iconAnchor: [badgeSize / 2, badgeSize / 2],
       });
