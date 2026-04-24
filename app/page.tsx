@@ -71,6 +71,7 @@ export default function HomePage() {
   const [visibleSystems, setVisibleSystems] = useState<Set<string>>(
     () => new Set(Object.keys(SYSTEM_LABELS))
   );
+  const [showStations, setShowStations] = useState<boolean>(true);
 
   // Checkin count & mobile checkin panel
   const [checkinCount, setCheckinCount] = useState<number>(0);
@@ -89,6 +90,46 @@ export default function HomePage() {
 
   // Toast state
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  // Load map display settings from localStorage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedShowStations = localStorage.getItem('rail-stamp-rally-show-stations');
+    if (savedShowStations !== null) {
+      setShowStations(savedShowStations === 'true');
+    }
+    try {
+      const savedSystems = localStorage.getItem('rail-stamp-rally-visible-systems');
+      if (savedSystems) {
+        const parsed: unknown = JSON.parse(savedSystems);
+        if (Array.isArray(parsed)) {
+          const knownSystems = new Set(Object.keys(SYSTEM_LABELS));
+          const savedSet = parsed.filter((s): s is string => typeof s === 'string');
+          // Visible = saved valid systems + any new systems not yet in localStorage (default visible)
+          const validSaved = new Set(savedSet.filter(s => knownSystems.has(s)));
+          const newSystems = [...knownSystems].filter(s => !savedSet.includes(s));
+          const finalVisible = new Set([...validSaved, ...newSystems]);
+          if (finalVisible.size > 0) {
+            setVisibleSystems(finalVisible);
+          }
+        }
+      }
+    } catch {
+      // Invalid JSON — keep default (all visible)
+    }
+  }, []);
+
+  // Persist showStations to localStorage on change
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('rail-stamp-rally-show-stations', String(showStations));
+  }, [showStations]);
+
+  // Persist visibleSystems to localStorage on change
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('rail-stamp-rally-visible-systems', JSON.stringify([...visibleSystems]));
+  }, [visibleSystems]);
 
   const showToast = useCallback((message: string, type: ToastItem['type'] = 'info') => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -126,7 +167,6 @@ export default function HomePage() {
       return next;
     });
   }, []);
-  const [showStations, setShowStations] = useState<boolean>(true);
   const handleToggleStations = useCallback(() => setShowStations((v) => !v), []);
 
   // Clear station pick target whenever train dialog closes
@@ -638,10 +678,6 @@ export default function HomePage() {
                 collectedBadges={collectedBadgesMap}
                 stationCountsBySystem={stationCountsBySystem}
                 collectedCountsBySystem={collectedCountsBySystem}
-                visibleSystems={visibleSystems}
-                onToggleSystem={handleToggleSystem}
-                showStations={showStations}
-                onToggleStations={handleToggleStations}
               />
             </div>
           )}
@@ -660,7 +696,15 @@ export default function HomePage() {
           {/* System settings */}
           {desktopPanel === 'settings' && (
             <div className={styles.panelContent}>
-              <AccountSettings onBack={() => setDesktopPanel('account')} />
+              <AccountSettings
+                onBack={() => setDesktopPanel('account')}
+                mapDisplay={{
+                  showStations,
+                  onToggleStations: handleToggleStations,
+                  visibleSystems,
+                  onToggleSystem: handleToggleSystem,
+                }}
+              />
             </div>
           )}
 
@@ -786,10 +830,6 @@ export default function HomePage() {
             collectedBadges={collectedBadgesMap}
             stationCountsBySystem={stationCountsBySystem}
             collectedCountsBySystem={collectedCountsBySystem}
-            visibleSystems={visibleSystems}
-            onToggleSystem={handleToggleSystem}
-            showStations={showStations}
-            onToggleStations={handleToggleStations}
           />
         </BottomSheet>
       )}
@@ -863,7 +903,15 @@ export default function HomePage() {
           title={t.account.systemSettings}
           defaultSnap={1}
         >
-          <AccountSettings onBack={() => { setMobileSettingsOpen(false); setMobileAccountOpen(true); }} />
+          <AccountSettings
+            onBack={() => { setMobileSettingsOpen(false); setMobileAccountOpen(true); }}
+            mapDisplay={{
+              showStations,
+              onToggleStations: handleToggleStations,
+              visibleSystems,
+              onToggleSystem: handleToggleSystem,
+            }}
+          />
         </BottomSheet>
       )}
 

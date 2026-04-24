@@ -29,6 +29,9 @@
   /* Toolbar */
   --toolbar-bg: #1a1a2e;
   --toolbar-border: rgba(255, 255, 255, 0.1);
+
+  /* Card background — dark mode */
+  --bg-card: #2a2a4a;
 }
 
 /* ── Light mode overrides ────────────────────────────────────────────────── */
@@ -46,6 +49,9 @@
   --shadow-panel: 2px 0 12px rgba(0, 0, 0, 0.12);
   --toolbar-bg: #f0f2f5;
   --toolbar-border: rgba(0, 0, 0, 0.1);
+
+  /* Card background — light mode */
+  --bg-card: #f7f7f7;
 }
 
 /* ── Theme color overrides ───────────────────────────────────────────────── */
