@@ -5,6 +5,7 @@ import type { RailwayFeatureProperties, StationProperties, LineProperties } from
 import { fetchStationLiveBoard } from '@/lib/tdxApi';
 import type { LiveBoardItem } from '@/lib/tdxApi';
 import { useTranslation } from '@/lib/i18n';
+import { SYSTEM_LABELS } from '@/lib/railwayConstants';
 import styles from './FeatureDetails.module.css';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,29 +24,12 @@ interface FeatureDetailsProps {
   stationCountsBySystem?: Map<string, number>;
   /** Collected station counts per system type */
   collectedCountsBySystem?: Map<string, number>;
-  /** Set of currently visible system types (for toggle) */
-  visibleSystems?: Set<string>;
-  /** Called when user toggles a system's visibility */
-  onToggleSystem?: (system: string) => void;
-  /** Whether stations are currently visible on the map */
-  showStations?: boolean;
-  /** Toggle handler for global station visibility */
-  onToggleStations?: () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// System type display labels (exported for use in page.tsx)
+// System type display labels (re-exported from shared constants for backwards compatibility)
 // ─────────────────────────────────────────────────────────────────────────────
-export const SYSTEM_LABELS: Record<string, string> = {
-  TRA: '台灣鐵路 (TRA)',
-  HSR: '高速鐵路 (HSR)',
-  TRTC: '台北捷運 (TRTC)',
-  TYMC: '桃園捷運 (TYMC)',
-  KRTC: '高雄捷運 (KRTC)',
-  TMRT: '台中捷運 (TMRT)',
-  NTMC: '新北捷運 (NTMC)',
-  KLRT: '高雄輕軌 (KLRT)',
-};
+export { SYSTEM_LABELS };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // StationLiveBoard — 即時電子看板（僅 TRA 車站）
@@ -244,7 +228,7 @@ function LineDetail({ line }: { line: LineProperties }) {
 // Renders detail content; layout (bottom-sheet vs sidebar) is handled by the
 // parent page component.
 // ─────────────────────────────────────────────────────────────────────────────
-export default function FeatureDetails({ feature, onClose, onBack, collectedBadges, stationCountsBySystem, collectedCountsBySystem, visibleSystems, onToggleSystem, showStations, onToggleStations }: FeatureDetailsProps) {
+export default function FeatureDetails({ feature, onClose, onBack, collectedBadges, stationCountsBySystem, collectedCountsBySystem }: FeatureDetailsProps) {
   const { t } = useTranslation();
   if (!feature) {
     return (
@@ -254,20 +238,6 @@ export default function FeatureDetails({ feature, onClose, onBack, collectedBadg
             ← {t.common.back}
           </button>
         )}
-        <div className={styles.stationToggleRow}>
-          <div className={styles.stationToggleLabel}>{t.progress.stationDisplay}</div>
-          {onToggleStations && (
-            <button
-              className={`${styles.toggleSwitch} ${showStations ? styles.toggleOn : styles.toggleOff}`}
-              onClick={onToggleStations}
-              aria-label={showStations ? t.progress.hideStation : t.progress.showStation}
-              aria-pressed={!!showStations}
-              type="button"
-            >
-              <span className={styles.toggleKnob} />
-            </button>
-          )}
-        </div>
 
         {stationCountsBySystem && stationCountsBySystem.size > 0 && (
           <div className={styles.progressSection}>
@@ -277,22 +247,10 @@ export default function FeatureDetails({ feature, onClose, onBack, collectedBadg
               const collected = collectedCountsBySystem?.get(key) ?? 0;
               if (total === 0) return null;
               const pct = Math.round((collected / total) * 100);
-              const isVisible = !visibleSystems || visibleSystems.has(key);
               return (
                 <div key={key} className={styles.progressItem}>
                   <div className={styles.progressHeader}>
                     <div className={styles.progressLabel}>{label}</div>
-                    {onToggleSystem && (
-                      <button
-                        className={`${styles.toggleSwitch} ${isVisible ? styles.toggleOn : styles.toggleOff}`}
-                        onClick={() => onToggleSystem(key)}
-                        aria-label={isVisible ? t.progress.hide(label) : t.progress.show(label)}
-                        aria-pressed={isVisible}
-                        type="button"
-                      >
-                        <span className={styles.toggleKnob} />
-                      </button>
-                    )}
                   </div>
                   <div className={styles.progressBarOuter}>
                     <div

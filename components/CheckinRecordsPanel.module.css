@@ -34,7 +34,7 @@
 
 /* Stats card */
 .statsCard {
-  background: var(--bg-panel);
+  background: var(--bg-card);
   border: 1px solid rgba(128, 128, 128, 0.15);
   border-radius: 10px;
   padding: 16px;

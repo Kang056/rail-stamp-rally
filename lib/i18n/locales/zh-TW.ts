@@ -39,6 +39,9 @@ const zhTW = {
       colorGreen: '綠色',
       colorOrange: '橙色',
       colorRed: '紅色',
+      mapDisplaySettings: '地圖顯示設定',
+      stationDisplay: '車站顯示',
+      routeDisplay: '路線顯示',
     },
   },
   map: {

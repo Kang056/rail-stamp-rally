@@ -142,7 +142,7 @@ test('Statistics card displays icon, count, and label correctly', async ({ page 
     // Verify icon exists (should be 🏁)
     const statsIcon = statsCard.locator('[class*="statsIcon"]');
     const iconText = await statsIcon.textContent({ timeout: 1000 }).catch(() => '');
-    expect(iconText.includes('🏁') || true).toBeTruthy();
+    expect(iconText?.includes('🏁') || true).toBeTruthy();
 
     // Verify count is displayed
     const statsCount = statsCard.locator('[class*="statsCount"]');
@@ -214,7 +214,7 @@ test('Panel title "打卡紀錄" is displayed correctly', async ({ page }) => {
     const title = page.locator('[class*="panelTitle"]');
     const titleText = await title.textContent({ timeout: 2000 }).catch(() => '');
     
-    expect(titleText.includes('打卡紀錄')).toBeTruthy();
+    expect(titleText?.includes('打卡紀錄')).toBeTruthy();
   }
 });
 

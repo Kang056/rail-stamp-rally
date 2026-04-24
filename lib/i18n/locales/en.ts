@@ -41,6 +41,9 @@ const en = {
       colorGreen: 'Green',
       colorOrange: 'Orange',
       colorRed: 'Red',
+      mapDisplaySettings: 'Map Display Settings',
+      stationDisplay: 'Station Display',
+      routeDisplay: 'Route Display',
     },
   },
   map: {

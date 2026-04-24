@@ -258,7 +258,7 @@
 }
 
 .resultCard {
-  background: var(--bg-panel);
+  background: var(--bg-card);
   border: 1px solid var(--border-panel);
   border-radius: 10px;
   padding: 10px 12px;

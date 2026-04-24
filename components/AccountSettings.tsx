@@ -4,6 +4,7 @@ import { useTranslation } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme/ThemeContext';
 import type { ThemeColor } from '@/lib/theme/ThemeContext';
 import type { LocaleCode } from '@/lib/i18n';
+import { SYSTEM_LABELS } from '@/lib/railwayConstants';
 import styles from './AccountSettings.module.css';
 
 const THEME_COLOR_HEX: Record<ThemeColor, string> = {
@@ -18,7 +19,14 @@ const THEME_COLOR_KEYS: ThemeColor[] = ['default', 'blue', 'green', 'orange', 'r
 
 const LOCALE_OPTIONS: LocaleCode[] = ['zh-TW', 'en'];
 
-export default function AccountSettings({ onBack }: { onBack?: () => void }) {
+interface MapDisplaySettings {
+  showStations: boolean;
+  onToggleStations: () => void;
+  visibleSystems: Set<string>;
+  onToggleSystem: (system: string) => void;
+}
+
+export default function AccountSettings({ onBack, mapDisplay }: { onBack?: () => void; mapDisplay?: MapDisplaySettings }) {
   const { t, locale, setLocale } = useTranslation();
   const { colorMode, themeColor, setColorMode, setThemeColor } = useTheme();
 
@@ -100,6 +108,53 @@ export default function AccountSettings({ onBack }: { onBack?: () => void }) {
           </div>
         </div>
       </div>
+
+      {/* Map display settings */}
+      {mapDisplay && (
+        <div className={styles.settingSection}>
+          <p className={styles.settingSectionTitle}>{t.account.settings.mapDisplaySettings}</p>
+
+          {/* Station display toggle */}
+          <div className={styles.settingRow}>
+            <div className={styles.settingToggleRow}>
+              <span className={styles.settingLabel}>{t.account.settings.stationDisplay}</span>
+              <button
+                className={`${styles.toggleSwitch} ${mapDisplay.showStations ? styles.toggleOn : styles.toggleOff}`}
+                onClick={mapDisplay.onToggleStations}
+                aria-label={mapDisplay.showStations ? t.progress.hideStation : t.progress.showStation}
+                aria-pressed={mapDisplay.showStations}
+                type="button"
+              >
+                <span className={styles.toggleKnob} />
+              </button>
+            </div>
+          </div>
+
+          {/* Per-system route display toggles */}
+          <div className={styles.settingRow}>
+            <span className={styles.settingLabel}>{t.account.settings.routeDisplay}</span>
+            <div className={styles.systemToggleList}>
+              {Object.entries(SYSTEM_LABELS).map(([key, label]) => {
+                const isVisible = mapDisplay.visibleSystems.has(key);
+                return (
+                  <div key={key} className={styles.systemToggleItem}>
+                    <span className={styles.systemToggleLabel}>{label}</span>
+                    <button
+                      className={`${styles.toggleSwitch} ${isVisible ? styles.toggleOn : styles.toggleOff}`}
+                      onClick={() => mapDisplay.onToggleSystem(key)}
+                      aria-label={isVisible ? t.progress.hide(label) : t.progress.show(label)}
+                      aria-pressed={isVisible}
+                      type="button"
+                    >
+                      <span className={styles.toggleKnob} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
