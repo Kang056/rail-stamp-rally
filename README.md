@@ -11,8 +11,8 @@ station/line historical information backed by **Supabase + PostGIS**.
 | Framework | [Next.js 15](https://nextjs.org) (App Router) |
 | Database | [Supabase](https://supabase.com) (PostgreSQL + PostGIS) |
 | Map Engine | [Leaflet.js](https://leafletjs.com), [geojson-vt](https://github.com/mapbox/geojson-vt), [Leaflet.VectorGrid](https://github.com/Leaflet/Leaflet.VectorGrid) |
-| Mobile UI | [react-spring-bottom-sheet](https://github.com/stipsan/react-spring-bottom-sheet) |
-| Deployment | [Vercel](https://vercel.com) (Hobby tier) |
+| Mobile UI | [vaul](https://github.com/emilkowalski/vaul) (bottom sheet drawer) |
+| Deployment | [GitHub Pages](https://pages.github.com) (static export via `output: 'export'`) |
 
 ## Getting Started
 
@@ -57,22 +57,30 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 .
 ├── app/
-│   ├── layout.tsx          # Root layout (metadata, global styles)
-│   ├── page.tsx            # Main page (map + sidebar/bottom-sheet)
-│   ├── page.module.css     # Responsive layout styles
-│   └── globals.css         # Global CSS reset
+│   ├── layout.tsx              # Root layout (metadata, global styles)
+│   ├── page.tsx                # Main page (map + sidebar/bottom-sheet, state owner)
+│   ├── page.module.css         # Responsive layout styles
+│   └── globals.css             # Global CSS reset
 ├── components/
-│   ├── Map.tsx             # Leaflet map (dynamically imported, ssr:false)
-│   ├── FeatureDetails.tsx  # Station / line detail panel
-│   └── FeatureDetails.module.css
+│   ├── Map.tsx                 # Leaflet map (dynamically imported, ssr:false)
+│   ├── FeatureDetails.tsx      # Station / line detail panel
+│   ├── AuthButton.tsx          # Google OAuth sign-in/out + account drawer
+│   ├── BadgeCheckin.tsx        # GPS check-in button
+│   ├── CheckinRecordsPanel.tsx # Check-in history panel (time + station, newest first)
+│   ├── AccountSettings.tsx     # Map display & theme settings
+│   └── TrainScheduleDialog.tsx # TRA / HSR / Metro schedule query
 ├── lib/
-│   └── supabaseClient.ts   # Supabase client + typed helper functions
+│   ├── supabaseClient.ts       # Supabase client + typed helper functions
+│   ├── levelSystem.ts          # XP / level calculation
+│   ├── railwayConstants.ts     # System type labels & colours
+│   └── i18n/                  # Traditional Chinese translation strings
 ├── scripts/
-│   └── ingest-tdx-data.js  # One-time TDX data ingestion script
+│   └── ingest-tdx-data.js     # One-time TDX data ingestion script
 ├── supabase/
-│   └── schema.sql          # PostGIS database schema + RPC
+│   ├── schema.sql              # PostGIS database schema + RPCs
+│   └── *.sql                   # Incremental migration files (date-prefixed)
 └── public/
-    └── leaflet/            # Leaflet default marker icons
+    └── leaflet/                # Leaflet default marker icons
 ```
 
 ## Responsive Layout
@@ -93,6 +101,21 @@ Metro lines use a single solid coloured polyline.
 
 For very large datasets, the code includes a commented-out scaffold for
 switching to **geojson-vt + Leaflet.VectorGrid** tiled rendering.
+
+## Check-in Records (打卡紀錄)
+
+After signing in, users can view their complete check-in history via the
+**「打卡紀錄」** panel (accessible from the account menu on both mobile and desktop).
+
+The panel shows:
+- **Total check-in count** — summary card at the top
+- **Individual records** — sorted newest to oldest, each entry displaying the
+  **check-in time** and **station name**
+
+Data is fetched from the `checkin_logs` table via the `get_user_checkin_logs`
+Postgres RPC (one entry per station per day, per the daily check-in constraint).
+New entries are prepended in real time after a successful GPS check-in without
+requiring a page reload.
 
 ## Troubleshooting — RPC & RLS (常見問題與排錯)
 

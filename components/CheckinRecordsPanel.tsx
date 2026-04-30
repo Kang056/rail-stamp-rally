@@ -1,15 +1,18 @@
 'use client';
 
 import type { Translations } from '@/lib/i18n/locales/zh-TW';
+import type { CheckinLogRecord } from '@/lib/supabaseClient';
 import styles from './CheckinRecordsPanel.module.css';
 
 interface CheckinRecordsPanelProps {
-  checkinCount: number;
+  checkinRecords: CheckinLogRecord[];
   t: Translations;
   onBack?: () => void;
 }
 
-export default function CheckinRecordsPanel({ checkinCount, t, onBack }: CheckinRecordsPanelProps) {
+export default function CheckinRecordsPanel({ checkinRecords, t, onBack }: CheckinRecordsPanelProps) {
+  const checkinCount = checkinRecords.length;
+
   return (
     <div className={styles.container}>
       {onBack && (
@@ -27,8 +30,25 @@ export default function CheckinRecordsPanel({ checkinCount, t, onBack }: Checkin
         </div>
       </div>
 
-      {checkinCount === 0 && (
+      {checkinCount === 0 ? (
         <p className={styles.emptyState}>{'尚無打卡紀錄'}</p>
+      ) : (
+        <ul className={styles.recordsList}>
+          {checkinRecords.map((record, idx) => (
+            <li key={`${record.created_at}-${idx}`} className={styles.recordItem}>
+              <span className={styles.recordTime}>
+                {new Date(record.created_at).toLocaleString('zh-TW', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </span>
+              <span className={styles.recordStation}>{record.station_name}</span>
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   );

@@ -15,7 +15,8 @@ import type { RailwayFeatureProperties, CollectedBadge } from '@/lib/supabaseCli
 import type { User } from '@supabase/supabase-js';
 import FeatureDetails, { SYSTEM_LABELS } from '@/components/FeatureDetails';
 import { MOCK_GEOJSON } from '@/lib/mockGeoJSON';
-import { supabase, getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile, getUserCheckinCount } from '@/lib/supabaseClient';
+import { supabase, getAllRailwayGeoJSON, getUserCollectedBadges, upsertProfile, getUserCheckinCount, getUserCheckinLogs } from '@/lib/supabaseClient';
+import type { CheckinLogRecord } from '@/lib/supabaseClient';
 import BadgeCheckin from '@/components/BadgeCheckin';
 import AuthButton from '@/components/AuthButton';
 import AccountSettings from '@/components/AccountSettings';
@@ -73,8 +74,9 @@ export default function HomePage() {
   );
   const [showStations, setShowStations] = useState<boolean>(true);
 
-  // Checkin count & mobile checkin panel
+  // Checkin count & records & mobile checkin panel
   const [checkinCount, setCheckinCount] = useState<number>(0);
+  const [checkinRecords, setCheckinRecords] = useState<CheckinLogRecord[]>([]);
   const [mobileCheckinOpen, setMobileCheckinOpen] = useState(false);
 
   // Train schedule dialog state
@@ -225,6 +227,7 @@ export default function HomePage() {
       setCollectedBadgesMap(new Map());
       setNewBadgeStationId(null);
       setCheckinCount(0);
+      setCheckinRecords([]);
     }
   }, [showToast, t]);
 
@@ -235,6 +238,9 @@ export default function HomePage() {
       next.set(result.station_id, { unlocked_at: new Date().toISOString(), badge_image_url: result.badge_image_url });
       return next;
     });
+    // Prepend new check-in record (newest first)
+    const newRecord: CheckinLogRecord = { created_at: new Date().toISOString(), station_name: result.station_name };
+    setCheckinRecords(prev => [newRecord, ...prev]);
     // Increment checkin count on every successful check-in
     setCheckinCount(prev => {
       const newCount = prev + 1;
@@ -307,8 +313,11 @@ export default function HomePage() {
       })
       .catch((err) => { console.error('Failed to fetch user badges:', err); });
 
-    const checkinP = getUserCheckinCount(user.id)
-      .then((count) => { setCheckinCount(count); })
+    const checkinP = getUserCheckinLogs(user.id)
+      .then((records) => {
+        setCheckinRecords(records);
+        setCheckinCount(records.length);
+      })
       .catch(() => {});
 
     // Only mark loading done after BOTH requests finish, preventing partial-load
@@ -442,12 +451,14 @@ export default function HomePage() {
       setCollectedStationIds(ids);
       setCollectedBadgesMap(badgesMap);
       setCheckinCount(ids.size);
+      setCheckinRecords([]);
     } else {
       showToast(t.account.mockLoginOff, 'info');
       setCollectedStationIds(new Set());
       setCollectedBadgesMap(new Map());
       setShowAllBadges(false);
       setCheckinCount(0);
+      setCheckinRecords([]);
     }
   }, [mockLogin, geojson, showToast, t]);
 
@@ -699,7 +710,7 @@ export default function HomePage() {
           {desktopPanel === 'checkin' && (
             <div className={styles.panelContent}>
               <CheckinRecordsPanel
-                checkinCount={checkinCount}
+                checkinRecords={checkinRecords}
                 t={t}
                 onBack={() => setDesktopPanel('account')}
               />
@@ -901,7 +912,7 @@ export default function HomePage() {
           defaultSnap={1}
         >
           <CheckinRecordsPanel
-            checkinCount={checkinCount}
+            checkinRecords={checkinRecords}
             t={t}
             onBack={() => { setMobileCheckinOpen(false); setMobileAccountOpen(true); }}
           />

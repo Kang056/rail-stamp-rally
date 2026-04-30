@@ -198,3 +198,29 @@ export async function getUserCheckinCount(userId: string): Promise<number> {
 
   return (data as number) ?? 0;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CheckinLogRecord — shape returned by get_user_checkin_logs RPC
+// ─────────────────────────────────────────────────────────────────────────────
+export interface CheckinLogRecord {
+  created_at: string;
+  station_name: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getUserCheckinLogs
+// Calls the `get_user_checkin_logs` Postgres RPC to fetch all check-in records
+// for a user, sorted newest to oldest, with station name included.
+// ─────────────────────────────────────────────────────────────────────────────
+export async function getUserCheckinLogs(userId: string): Promise<CheckinLogRecord[]> {
+  const { data, error } = await supabase.rpc('get_user_checkin_logs', {
+    p_user_id: userId,
+  });
+
+  if (error) {
+    console.error('Failed to fetch checkin logs:', error.message);
+    return [];
+  }
+
+  return (data as CheckinLogRecord[]) ?? [];
+}
