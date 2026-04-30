@@ -80,6 +80,7 @@ export default function HomePage() {
   // Train schedule dialog state
   const [trainDialogOpen, setTrainDialogOpen] = useState(false);
   const [stationPickTarget, setStationPickTarget] = useState<StationPickTarget>(null);
+  const [pickSystem, setPickSystem] = useState<string>('TRA');
   const [pickedStation, setPickedStation] = useState<{ stationId: string; stationName: string } | null>(null);
 
   // User geolocation for map marker
@@ -181,7 +182,7 @@ export default function HomePage() {
     // If in station-picking mode for train schedule, intercept station clicks
     // Only intercept when the train dialog is actually open (mobile) or desktop panel is 'train'
     if (stationPickTarget && (trainDialogOpen || desktopPanel === 'train') && props.feature_type === 'station') {
-      if ((props as any).system_type === 'TRA') {
+      if ((props as any).system_type === pickSystem) {
         setPickedStation({
           stationId: (props as any).station_id,
           stationName: (props as any).station_name,
@@ -193,7 +194,7 @@ export default function HomePage() {
           'success',
         );
       } else {
-        showToast(t.train.traOnly, 'error');
+        showToast((t.train.systemOnly as (s: string) => string)(SYSTEM_LABELS[pickSystem] ?? pickSystem), 'error');
       }
       return; // Don't open station details during picking
     }
@@ -329,12 +330,23 @@ export default function HomePage() {
     return counts;
   }, [geojson]);
 
-  const traStations = useMemo(() => {
-    if (!geojson) return [];
-    return geojson.features
-      .filter((f: any) => f.properties.feature_type === 'station' && f.properties.system_type === 'TRA')
-      .map((f: any) => ({ stationId: f.properties.station_id as string, stationName: f.properties.station_name as string }))
-      .sort((a: { stationId: string }, b: { stationId: string }) => a.stationId.localeCompare(b.stationId, undefined, { numeric: true }));
+  const systemStations = useMemo(() => {
+    if (!geojson) return {} as Record<string, { stationId: string; stationName: string }[]>;
+    const bySystem: Record<string, { stationId: string; stationName: string }[]> = {};
+    geojson.features.forEach((f: any) => {
+      if (f.properties.feature_type === 'station') {
+        const sys = f.properties.system_type as string;
+        if (!bySystem[sys]) bySystem[sys] = [];
+        bySystem[sys].push({
+          stationId: f.properties.station_id as string,
+          stationName: f.properties.station_name as string,
+        });
+      }
+    });
+    Object.values(bySystem).forEach((stations) =>
+      stations.sort((a, b) => a.stationId.localeCompare(b.stationId, undefined, { numeric: true }))
+    );
+    return bySystem;
   }, [geojson]);
 
   const collectedCountsBySystem = useMemo(() => {
@@ -462,8 +474,9 @@ export default function HomePage() {
   }, [showToast, dismissToast, t]);
 
   // Train schedule station pick callback — dialog stays open
-  const handleRequestPick = useCallback((target: StationPickTarget) => {
+  const handleRequestPick = useCallback((target: StationPickTarget, system?: string) => {
     setStationPickTarget(target);
+    if (system) setPickSystem(system);
     // Clear any stale picked station when starting a new pick
     if (target !== null) {
       setPickedStation(null);
@@ -722,7 +735,7 @@ export default function HomePage() {
                 }}
                 onToast={showToast}
                 onDismissToast={dismissToast}
-                traStations={traStations}
+                systemStations={systemStations}
               />
             </div>
           )}
@@ -874,7 +887,7 @@ export default function HomePage() {
             }}
             onToast={showToast}
             onDismissToast={dismissToast}
-            traStations={traStations}
+            systemStations={systemStations}
           />
         </BottomSheet>
       )}

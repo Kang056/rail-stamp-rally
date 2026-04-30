@@ -59,3 +59,204 @@ export async function fetchStationLiveBoard(stationId: string): Promise<LiveBoar
     return [];
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HSR (高鐵) Schedule
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HsrTrainResult {
+  trainNo: string;
+  departureTime: string;
+  arrivalTime: string;
+  travelTime: string;
+  standardFare?: number; // 自由座成人票
+}
+
+async function queryHsrFare(originId: string, destId: string): Promise<number | undefined> {
+  const url = `${TDX_BASE}/v2/Rail/THSR/ODFare/${originId}/to/${destId}?$format=JSON`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return undefined;
+    const data = await resp.json();
+    const fares: any[] = Array.isArray(data) ? data.flatMap((d: any) => d.Fares ?? []) : [];
+    // CabinClass=1 自由座, TicketType=1 成人, FareClass=1 全票
+    const found = fares.find((f: any) => f.CabinClass === 1 && f.TicketType === 1 && f.FareClass === 1);
+    return found?.Price;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function queryHsrODSchedule(
+  originId: string,
+  destId: string,
+  date: string,
+): Promise<HsrTrainResult[]> {
+  const safeOrigin = sanitizeStationId(originId);
+  const safeDest = sanitizeStationId(destId);
+  const [scheduleResp, fare] = await Promise.all([
+    fetch(
+      `${TDX_BASE}/v2/Rail/THSR/DailyTimetable/OD/${safeOrigin}/to/${safeDest}/${date}?$format=JSON`,
+    ),
+    queryHsrFare(safeOrigin, safeDest),
+  ]);
+
+  if (!scheduleResp.ok) {
+    throw new Error(`TDX API 回應錯誤: ${scheduleResp.status}`);
+  }
+
+  const data = await scheduleResp.json();
+  const items: any[] = Array.isArray(data) ? data : [];
+
+  return items.map((item: any) => {
+    const trainNo = item.DailyTrainInfo?.TrainNo ?? '';
+    const depTime = item.OriginStopTime?.DepartureTime ?? '';
+    const arrTime = item.DestinationStopTime?.ArrivalTime ?? '';
+
+    let travelTime = '';
+    if (depTime && arrTime) {
+      const [dh, dm] = depTime.split(':').map(Number);
+      const [ah, am] = arrTime.split(':').map(Number);
+      let diffMin = ah * 60 + am - (dh * 60 + dm);
+      if (diffMin < 0) diffMin += 24 * 60;
+      if (diffMin > 0) {
+        const h = Math.floor(diffMin / 60);
+        const m = diffMin % 60;
+        travelTime = h > 0 ? `${h}時${m}分` : `${m}分`;
+      }
+    }
+
+    return { trainNo, departureTime: depTime, arrivalTime: arrTime, travelTime, standardFare: fare };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Metro (捷運) Service Info
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Strip Metro operator prefix from station ID.
+ * e.g. 'TRTC-BL01' → 'BL01', 'KRTC-R01' → 'R01'
+ */
+export function sanitizeMetroId(id: string): string {
+  const m = id.match(/^[A-Z]+-(.+)$/);
+  return m ? m[1] : id;
+}
+
+export interface MetroServiceItem {
+  lineNo: string;
+  tripHeadSign: string;
+  firstTrainTime: string;
+  lastTrainTime: string;
+  peakHeadwayMins?: number;
+  offPeakHeadwayMins?: number;
+}
+
+export interface MetroQueryResult {
+  fare?: number;
+  travelDistance?: number;
+  originServices: MetroServiceItem[];
+}
+
+export async function queryMetroServiceInfo(
+  operatorId: string,
+  originRawId: string,
+  destRawId?: string,
+): Promise<MetroQueryResult> {
+  const originId = sanitizeMetroId(originRawId);
+  const destId = destRawId ? sanitizeMetroId(destRawId) : undefined;
+
+  const firstLastUrl =
+    `${TDX_BASE}/v2/Rail/Metro/FirstLastTimetable/${operatorId}` +
+    `?$filter=StationID eq '${encodeURIComponent(originId)}'&$format=JSON`;
+
+  const fareUrl = destId
+    ? `${TDX_BASE}/v2/Rail/Metro/ODFare/${operatorId}` +
+      `?$filter=OriginStationID eq '${encodeURIComponent(originId)}' and DestinationStationID eq '${encodeURIComponent(destId)}'&$format=JSON`
+    : null;
+
+  const [firstLastResp, fareResp] = await Promise.all([
+    fetch(firstLastUrl),
+    fareUrl ? fetch(fareUrl) : Promise.resolve(null),
+  ]);
+
+  if (!firstLastResp.ok) {
+    throw new Error(`TDX API 回應錯誤: ${firstLastResp.status}`);
+  }
+
+  const firstLastData = await firstLastResp.json();
+  const items: any[] = Array.isArray(firstLastData) ? firstLastData : [];
+
+  // Unique line numbers from results
+  const lineNos = [...new Set(items.map((i: any) => i.LineNo as string))];
+
+  // Fetch frequency for each line in parallel
+  const freqResults = await Promise.all(
+    lineNos.map((lineNo) =>
+      fetch(
+        `${TDX_BASE}/v2/Rail/Metro/Frequency/${operatorId}` +
+          `?$filter=LineNo eq '${encodeURIComponent(lineNo)}'&$format=JSON`,
+      )
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []),
+    ),
+  );
+
+  const freqByLine = new Map<string, any[]>();
+  lineNos.forEach((lineNo, i) => {
+    freqByLine.set(lineNo, Array.isArray(freqResults[i]) ? freqResults[i] : []);
+  });
+
+  // Build service items
+  const todayWeekday = new Date().getDay(); // 0=Sun, 6=Sat
+  const isWeekend = todayWeekday === 0 || todayWeekday === 6;
+
+  const originServices: MetroServiceItem[] = items.map((item: any) => {
+    const lineNo = item.LineNo as string;
+    const freqItems = freqByLine.get(lineNo) ?? [];
+
+    const relevantFreq =
+      freqItems.find((f: any) => {
+        const svc = f.ServiceDay;
+        if (!svc) return true;
+        return isWeekend ? svc.Saturday === true || svc.Sunday === true : svc.Monday === true;
+      }) ?? freqItems[0];
+
+    const headways: any[] = relevantFreq?.Headways ?? [];
+    const peakHw = headways.find((h: any) => h.PeakFlag === '1' || h.PeakFlag === 1);
+    const offPeakHw = headways.find((h: any) => h.PeakFlag === '0' || h.PeakFlag === 0);
+
+    return {
+      lineNo,
+      tripHeadSign: item.TripHeadSign ?? '',
+      firstTrainTime: item.FirstTrainTime ?? '',
+      lastTrainTime: item.LastTrainTime ?? '',
+      peakHeadwayMins: peakHw
+        ? Math.round((peakHw.MinHeadwayMins + peakHw.MaxHeadwayMins) / 2)
+        : undefined,
+      offPeakHeadwayMins: offPeakHw
+        ? Math.round((offPeakHw.MinHeadwayMins + offPeakHw.MaxHeadwayMins) / 2)
+        : undefined,
+    };
+  });
+
+  // Parse fare
+  let fare: number | undefined;
+  let travelDistance: number | undefined;
+  if (fareResp) {
+    try {
+      const fareData = await fareResp.json();
+      const fareItems: any[] = Array.isArray(fareData) ? fareData : [];
+      if (fareItems.length > 0) {
+        travelDistance = fareItems[0]?.TravelDistance;
+        const fares: any[] = fareItems[0]?.Fares ?? [];
+        const adultFare = fares.find((f: any) => f.TicketType === 1 && f.FareClass === 1);
+        fare = adultFare?.Price;
+      }
+    } catch {
+      // Fare is optional
+    }
+  }
+
+  return { fare, travelDistance, originServices };
+}

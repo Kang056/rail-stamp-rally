@@ -1,5 +1,47 @@
 /* TrainScheduleDialog.module.css */
 
+/* ── Tab bar ──────────────────────────────────────────────────── */
+.tabBar {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 0.75rem;
+  padding-bottom: 2px;
+  border-bottom: 1.5px solid var(--border-panel);
+}
+
+.tabBar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  background: none;
+  border: 1.5px solid transparent;
+  border-radius: 6px 6px 0 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-panel-secondary);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text-panel);
+  background: rgba(32, 184, 212, 0.06);
+}
+
+.tabActive {
+  color: #20b8d4;
+  border-color: #20b8d4;
+  border-bottom-color: transparent;
+  background: rgba(32, 184, 212, 0.08);
+  font-weight: 700;
+}
+
 .container {
   padding: 0.5rem 0;
 }
@@ -351,3 +393,56 @@
   color: #c0392b;
   font-weight: 600;
 }
+
+/* ── Metro styles ──────────────────────────────────────────────── */
+.metroQuerySection {
+  margin-top: 0.5rem;
+}
+
+.metroFareCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(32, 184, 212, 0.08), rgba(32, 184, 212, 0.04));
+  border: 1px solid rgba(32, 184, 212, 0.2);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+}
+
+.metroFareText {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2a7f3f;
+}
+
+.metroDistText {
+  font-size: 0.82rem;
+  color: var(--text-panel-secondary);
+}
+
+.metroServiceRow {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--text-panel);
+  font-weight: 500;
+}
+
+.metroHeadwayRow {
+  display: flex;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--text-panel-secondary);
+  margin-top: 4px;
+}
+
+.metroNote {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-panel-secondary);
+  text-align: center;
+  font-style: italic;
+  opacity: 0.8;
+}
+
