@@ -260,3 +260,93 @@ export async function queryMetroServiceInfo(
 
   return { fare, travelDistance, originServices };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THSR Station Board (today's schedule at one station)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface HsrStationStop {
+  trainNo: string;
+  departureTime: string; // HH:mm
+  direction: number;     // 0 = southbound 南下, 1 = northbound 北上
+  endingStationName: string;
+}
+
+export async function fetchHsrStationBoard(stationId: string): Promise<HsrStationStop[]> {
+  const safeId = sanitizeStationId(stationId);
+  if (!safeId) return [];
+
+  const url = `${TDX_BASE}/v2/Rail/THSR/DailyTimetable/Today?$format=JSON`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const trains: any[] = Array.isArray(data) ? data : [];
+
+    const now = new Date();
+    const windowStart = now.getHours() * 60 + now.getMinutes() - 10; // include trains 10 min ago
+
+    const result: HsrStationStop[] = [];
+    for (const train of trains) {
+      const stopTimes: any[] = train.StopTimes ?? [];
+      const stop = stopTimes.find((s: any) => String(s.StationID) === safeId);
+      if (!stop) continue;
+      const depTime: string = stop.DepartureTime ?? stop.ArrivalTime ?? '';
+      if (!depTime) continue;
+      const [h, m] = depTime.split(':').map(Number);
+      if (h * 60 + m < windowStart) continue;
+      result.push({
+        trainNo: train.DailyTrainInfo?.TrainNo ?? '',
+        departureTime: depTime,
+        direction: train.DailyTrainInfo?.Direction ?? 0,
+        endingStationName: train.DailyTrainInfo?.EndingStationName?.Zh_tw ?? '',
+      });
+    }
+
+    return result
+      .sort((a, b) => a.departureTime.localeCompare(b.departureTime))
+      .slice(0, 20);
+  } catch {
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Metro Live Board (real-time next-train ETAs at one station)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MetroLiveBoardItem {
+  lineId: string;
+  destinationName: string;
+  estimatedSeconds: number; // seconds until arrival; -1 = unavailable
+  direction: number;        // 0 or 1
+}
+
+export async function fetchMetroLiveBoard(
+  operatorId: string,
+  stationUID: string,
+): Promise<MetroLiveBoardItem[]> {
+  // stationUID e.g. 'TRTC-BL01' — use directly in OData filter
+  const url =
+    `${TDX_BASE}/v2/Rail/Metro/LiveBoard/${operatorId}` +
+    `?$filter=StationUID eq '${stationUID}'&$format=JSON`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const items: any[] = Array.isArray(data) ? data : [];
+    return items
+      .map((item: any) => ({
+        lineId: item.LineID ?? item.LineNo ?? '',
+        destinationName: item.DestinationName?.Zh_tw ?? item.DestinationName ?? '',
+        estimatedSeconds:
+          typeof item.EstimatedTime === 'number' ? item.EstimatedTime : -1,
+        direction: item.Direction ?? 0,
+      }))
+      .filter((item) => item.estimatedSeconds >= 0)
+      .sort((a, b) => a.estimatedSeconds - b.estimatedSeconds);
+  } catch {
+    return [];
+  }
+}
+

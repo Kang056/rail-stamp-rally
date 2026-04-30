@@ -1,45 +1,72 @@
 /* TrainScheduleDialog.module.css */
 
-/* ── Tab bar ──────────────────────────────────────────────────── */
-.tabBar {
+/* ── Route selector grid ────────────────────────────────────── */
+.routeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 0.75rem;
+}
+
+.routeBtn {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  margin-bottom: 0.75rem;
-  padding-bottom: 2px;
-  border-bottom: 1.5px solid var(--border-panel);
-}
-
-.tabBar::-webkit-scrollbar {
-  display: none;
-}
-
-.tab {
-  flex-shrink: 0;
-  padding: 5px 10px;
-  background: none;
-  border: 1.5px solid transparent;
-  border-radius: 6px 6px 0 0;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-panel-secondary);
+  padding: 14px 8px;
+  background: var(--bg-panel-content, #fff);
+  border: 1.5px solid var(--border-panel, #e0e0e0);
+  border-radius: 10px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  color: var(--text-panel);
+}
+
+.routeBtn:hover {
+  border-color: #20b8d4;
+  background: rgba(32, 184, 212, 0.06);
+  transform: translateY(-1px);
+}
+
+.routeBtn:active {
+  transform: translateY(0);
+}
+
+.routeBtnEmoji {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.routeBtnLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-panel);
+  text-align: center;
   white-space: nowrap;
 }
 
-.tab:hover {
-  color: var(--text-panel);
-  background: rgba(32, 184, 212, 0.06);
+.routeBtnSub {
+  font-size: 0.65rem;
+  color: var(--text-panel-secondary);
 }
 
-.tabActive {
-  color: #20b8d4;
-  border-color: #20b8d4;
-  border-bottom-color: transparent;
-  background: rgba(32, 184, 212, 0.08);
-  font-weight: 700;
+/* ── Back button row ─────────────────────────────────────────── */
+.backRow {
+  margin-bottom: 0.5rem;
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 0.82rem;
+  color: var(--text-panel-secondary);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.backBtn:hover {
+  color: var(--text-panel);
 }
 
 .container {

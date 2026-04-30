@@ -88,6 +88,8 @@ const en = {
   },
   liveBoard: {
     title: '🚃 Live Board (±30 min)',
+    hsrTitle: '🚄 HSR Today\'s Schedule',
+    metroTitle: '🚇 Metro Next Arrivals',
     loading: 'Loading…',
     noData: 'No train data available',
     northbound: '⬆ Northbound',
@@ -95,6 +97,9 @@ const en = {
     noTrain: 'No trains',
     onTime: 'On time',
     delayed: (min: number) => `⚠${min}m`,
+    metroArriving: 'Arriving',
+    metroEtaMins: (min: number) => `~${min} min`,
+    metroNoData: 'No real-time data available',
   },
   progress: {
     title: '🏅 Badge Collection Progress',
@@ -154,6 +159,8 @@ const en = {
     metroNoService: 'No service info available for this station',
     metroStep1: 'Step 1: Select origin station',
     metroStep2: 'Step 2 (optional): Select destination to check fare',
+    selectRoute: 'Select a Line',
+    backToRoutes: 'Back to Lines',
     // Tab labels
     tabTRA: 'TRA',
     tabHSR: 'HSR',

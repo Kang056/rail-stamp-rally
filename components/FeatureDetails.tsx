@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import type { RailwayFeatureProperties, StationProperties, LineProperties } from '@/lib/supabaseClient';
-import { fetchStationLiveBoard } from '@/lib/tdxApi';
-import type { LiveBoardItem } from '@/lib/tdxApi';
+import { fetchStationLiveBoard, fetchHsrStationBoard, fetchMetroLiveBoard } from '@/lib/tdxApi';
+import type { LiveBoardItem, HsrStationStop, MetroLiveBoardItem } from '@/lib/tdxApi';
 import { useTranslation } from '@/lib/i18n';
 import { SYSTEM_LABELS } from '@/lib/railwayConstants';
 import styles from './FeatureDetails.module.css';
@@ -32,56 +32,145 @@ interface FeatureDetailsProps {
 export { SYSTEM_LABELS };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// StationLiveBoard — 即時電子看板（僅 TRA 車站）
+// StationLiveBoard — 即時電子看板（TRA、HSR、捷運）
 // ─────────────────────────────────────────────────────────────────────────────
-function StationLiveBoard({ stationId }: { stationId: string }) {
-  const [items, setItems] = useState<LiveBoardItem[] | null>(null);
+const METRO_LIVE_SYSTEMS = new Set(['TRTC', 'TYMC', 'KRTC', 'TMRT', 'NTMC', 'KLRT']);
+
+function formatMetroEta(seconds: number, t: any): string {
+  if (seconds < 30) return t.liveBoard.metroArriving as string;
+  const mins = Math.round(seconds / 60);
+  return (t.liveBoard.metroEtaMins as (n: number) => string)(mins);
+}
+
+function StationLiveBoard({ stationId, systemType }: { stationId: string; systemType: string }) {
+  const [traItems, setTraItems] = useState<LiveBoardItem[] | null>(null);
+  const [hsrItems, setHsrItems] = useState<HsrStationStop[] | null>(null);
+  const [metroItems, setMetroItems] = useState<MetroLiveBoardItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setItems(null);
-    fetchStationLiveBoard(stationId).then((data) => {
-      if (!cancelled) {
-        setItems(data);
-        setLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [stationId]);
+    setTraItems(null);
+    setHsrItems(null);
+    setMetroItems(null);
 
-  const northbound = items?.filter((item) => item.Direction === 0) ?? [];
-  const southbound = items?.filter((item) => item.Direction === 1) ?? [];
+    if (systemType === 'TRA') {
+      fetchStationLiveBoard(stationId).then((data) => {
+        if (!cancelled) { setTraItems(data); setLoading(false); }
+      });
+    } else if (systemType === 'HSR') {
+      fetchHsrStationBoard(stationId).then((data) => {
+        if (!cancelled) { setHsrItems(data); setLoading(false); }
+      });
+    } else if (METRO_LIVE_SYSTEMS.has(systemType)) {
+      fetchMetroLiveBoard(systemType, stationId).then((data) => {
+        if (!cancelled) { setMetroItems(data); setLoading(false); }
+      });
+    } else {
+      setLoading(false);
+    }
+    return () => { cancelled = true; };
+  }, [stationId, systemType]);
+
+  const boardTitle =
+    systemType === 'TRA' ? (t.liveBoard.title as string)
+    : systemType === 'HSR' ? (t.liveBoard.hsrTitle as string)
+    : (t.liveBoard.metroTitle as string);
+
+  const hasData =
+    (systemType === 'TRA' && traItems !== null) ||
+    (systemType === 'HSR' && hsrItems !== null) ||
+    (METRO_LIVE_SYSTEMS.has(systemType) && metroItems !== null);
+
+  const isEmpty =
+    (systemType === 'TRA' && traItems?.length === 0) ||
+    (systemType === 'HSR' && hsrItems?.length === 0) ||
+    (METRO_LIVE_SYSTEMS.has(systemType) && metroItems?.length === 0);
 
   return (
     <div className={styles.liveBoardSection}>
-      <h3 className={styles.liveBoardTitle}>{t.liveBoard.title}</h3>
-      {loading && <p className={styles.liveBoardLoading}>{t.liveBoard.loading}</p>}
-      {!loading && items && items.length === 0 && (
-        <p className={styles.liveBoardEmpty}>{t.liveBoard.noData}</p>
+      <h3 className={styles.liveBoardTitle}>{boardTitle}</h3>
+      {loading && <p className={styles.liveBoardLoading}>{t.liveBoard.loading as string}</p>}
+      {!loading && hasData && isEmpty && (
+        <p className={styles.liveBoardEmpty}>
+          {METRO_LIVE_SYSTEMS.has(systemType)
+            ? (t.liveBoard.metroNoData as string)
+            : (t.liveBoard.noData as string)}
+        </p>
       )}
-      {!loading && items && items.length > 0 && (
+
+      {/* ── TRA: northbound / southbound columns ── */}
+      {!loading && systemType === 'TRA' && traItems && traItems.length > 0 && (
         <div className={styles.liveBoardColumns}>
-          {/* Northbound */}
-          <div className={styles.liveBoardGroup}>
-            <div className={styles.liveBoardGroupTitle}>{t.liveBoard.northbound}</div>
-            {northbound.length === 0 ? (
-              <p className={styles.liveBoardEmpty}>{t.liveBoard.noTrain}</p>
-            ) : (
-              northbound.map((item) => <LiveBoardRow key={item.TrainNo} item={item} />)
-            )}
-          </div>
-          {/* Southbound */}
-          <div className={styles.liveBoardGroup}>
-            <div className={styles.liveBoardGroupTitle}>{t.liveBoard.southbound}</div>
-            {southbound.length === 0 ? (
-              <p className={styles.liveBoardEmpty}>{t.liveBoard.noTrain}</p>
-            ) : (
-              southbound.map((item) => <LiveBoardRow key={item.TrainNo} item={item} />)
-            )}
-          </div>
+          {([0, 1] as const).map((dir) => {
+            const trains = traItems.filter((i) => i.Direction === dir);
+            return (
+              <div key={dir} className={styles.liveBoardGroup}>
+                <div className={styles.liveBoardGroupTitle}>
+                  {dir === 0 ? (t.liveBoard.northbound as string) : (t.liveBoard.southbound as string)}
+                </div>
+                {trains.length === 0 ? (
+                  <p className={styles.liveBoardEmpty}>{t.liveBoard.noTrain as string}</p>
+                ) : (
+                  trains.map((item) => <LiveBoardRow key={item.TrainNo} item={item} />)
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── HSR: southbound / northbound columns ── */}
+      {!loading && systemType === 'HSR' && hsrItems && hsrItems.length > 0 && (
+        <div className={styles.liveBoardColumns}>
+          {([0, 1] as const).map((dir) => {
+            const trains = hsrItems.filter((i) => i.direction === dir);
+            return (
+              <div key={dir} className={styles.liveBoardGroup}>
+                <div className={styles.liveBoardGroupTitle}>
+                  {dir === 0 ? (t.liveBoard.southbound as string) : (t.liveBoard.northbound as string)}
+                </div>
+                {trains.length === 0 ? (
+                  <p className={styles.liveBoardEmpty}>{t.liveBoard.noTrain as string}</p>
+                ) : (
+                  trains.map((item) => (
+                    <div key={item.trainNo} className={styles.liveBoardCard}>
+                      <div className={styles.liveBoardCardHeader}>
+                        <span className={styles.liveBoardTrainNo}>{item.trainNo}</span>
+                      </div>
+                      <div className={styles.liveBoardCardBody}>
+                        <span className={styles.liveBoardTime}>{item.departureTime}</span>
+                        {item.endingStationName && (
+                          <span className={styles.liveBoardDest}>→ {item.endingStationName}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Metro: ETA list ── */}
+      {!loading && METRO_LIVE_SYSTEMS.has(systemType) && metroItems && metroItems.length > 0 && (
+        <div className={styles.liveBoardColumns}>
+          {metroItems.map((item, idx) => (
+            <div key={`${item.lineId}-${idx}`} className={styles.liveBoardCard}>
+              <div className={styles.liveBoardCardHeader}>
+                <span className={styles.liveBoardTrainNo}>{item.lineId}</span>
+                {item.destinationName && (
+                  <span className={styles.liveBoardDest}>→ {item.destinationName}</span>
+                )}
+                <span className={`${styles.liveBoardDelay} ${styles.liveBoardMetroEta}`}>
+                  {formatMetroEta(item.estimatedSeconds, t)}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -186,7 +275,15 @@ function StationDetail({ station, collectedBadges }: { station: StationPropertie
       )}
 
       {station.system_type === 'TRA' && (
-        <StationLiveBoard stationId={station.station_id} />
+        <StationLiveBoard stationId={station.station_id} systemType={station.system_type} />
+      )}
+      {station.system_type === 'HSR' && (
+        <StationLiveBoard stationId={station.station_id} systemType={station.system_type} />
+      )}
+      {(station.system_type === 'TRTC' || station.system_type === 'TYMC' ||
+        station.system_type === 'KRTC' || station.system_type === 'TMRT' ||
+        station.system_type === 'NTMC' || station.system_type === 'KLRT') && (
+        <StationLiveBoard stationId={station.station_id} systemType={station.system_type} />
       )}
     </div>
   );

@@ -38,6 +38,18 @@ export const SCHEDULE_TABS = [
 
 export type ScheduleTabId = typeof SCHEDULE_TABS[number]['id'];
 
+/** Route button config for the selection grid */
+const ROUTE_CONFIG: Record<ScheduleTabId, { label: string; sub: string; emoji: string }> = {
+  TRA:  { label: '台灣鐵路', sub: 'TRA',  emoji: '🚂' },
+  HSR:  { label: '高速鐵路', sub: 'HSR',  emoji: '🚄' },
+  TRTC: { label: '台北捷運', sub: 'TRTC', emoji: '🚇' },
+  TYMC: { label: '桃園捷運', sub: 'TYMC', emoji: '🚈' },
+  KRTC: { label: '高雄捷運', sub: 'KRTC', emoji: '🚇' },
+  TMRT: { label: '台中捷運', sub: 'TMRT', emoji: '🚊' },
+  NTMC: { label: '新北捷運', sub: 'NTMC', emoji: '🚋' },
+  KLRT: { label: '高雄輕軌', sub: 'KLRT', emoji: '🚈' },
+};
+
 const METRO_SYSTEMS = new Set<string>(['TRTC', 'TYMC', 'KRTC', 'TMRT', 'NTMC', 'KLRT']);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,8 +264,8 @@ export default function TrainScheduleDialog({
   const isMobile = useIsMobile();
   const { t } = useTranslation();
 
-  // ── Active tab ──────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<ScheduleTabId>('TRA');
+  // ── Selected route (null = route selector screen) ─────────────────────────
+  const [selectedSystem, setSelectedSystem] = useState<ScheduleTabId | null>(null);
 
   // ── Per-tab state ───────────────────────────────────────────────────────────
   const [tabStates, setTabStates] = useState<Record<string, TabState>>(
@@ -267,17 +279,18 @@ export default function TrainScheduleDialog({
     }));
   }, []);
 
-  const state = tabStates[activeTab];
+  // state for currently active query (only relevant when selectedSystem != null)
+  const state = selectedSystem ? tabStates[selectedSystem] : defaultTabState();
 
-  // ── Dropdown UI state (reset on tab switch) ─────────────────────────────────
+  // ── Dropdown UI state (reset when switching systems) ───────────────────────
   const [originQuery, setOriginQuery] = useState('');
   const [destQuery, setDestQuery] = useState('');
   const [originDropdownOpen, setOriginDropdownOpen] = useState(false);
   const [destDropdownOpen, setDestDropdownOpen] = useState(false);
 
-  const handleTabChange = useCallback(
+  const handleSystemSelect = useCallback(
     (tabId: ScheduleTabId) => {
-      setActiveTab(tabId);
+      setSelectedSystem(tabId);
       setOriginQuery('');
       setDestQuery('');
       setOriginDropdownOpen(false);
@@ -287,10 +300,17 @@ export default function TrainScheduleDialog({
     [onRequestPick],
   );
 
+  const handleBackToRoutes = useCallback(() => {
+    setSelectedSystem(null);
+    onRequestPick(null);
+    setOriginQuery('');
+    setDestQuery('');
+  }, [onRequestPick]);
+
   // ── Station lists ───────────────────────────────────────────────────────────
   const currentStations = useMemo(
-    () => systemStations?.[activeTab] ?? [],
-    [systemStations, activeTab],
+    () => (selectedSystem ? systemStations?.[selectedSystem] ?? [] : []),
+    [systemStations, selectedSystem],
   );
 
   const useDropdown = isMobile && currentStations.length > 0;
@@ -311,47 +331,49 @@ export default function TrainScheduleDialog({
   const hasAutoStarted = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!selectedSystem) return; // still on route selector
     if (useDropdown) return;
     if (!isOpen) {
       hasAutoStarted.current = new Set();
       return;
     }
-    if (state.origin || hasAutoStarted.current.has(activeTab)) return;
-    hasAutoStarted.current.add(activeTab);
-    onRequestPick('origin', activeTab);
-  }, [isOpen, state.origin, onRequestPick, useDropdown, activeTab]);
+    if (state.origin || hasAutoStarted.current.has(selectedSystem)) return;
+    hasAutoStarted.current.add(selectedSystem);
+    onRequestPick('origin', selectedSystem);
+  }, [isOpen, state.origin, onRequestPick, useDropdown, selectedSystem]);
 
   // ── Handle pickedStation from map ───────────────────────────────────────────
   useEffect(() => {
-    if (!pickedStation || !pickTarget) return;
+    if (!pickedStation || !pickTarget || !selectedSystem) return;
     if (pickTarget === 'origin') {
-      updateTab(activeTab, { origin: pickedStation });
-      setTimeout(() => onRequestPick('destination', activeTab), 100);
+      updateTab(selectedSystem, { origin: pickedStation });
+      setTimeout(() => onRequestPick('destination', selectedSystem), 100);
     } else if (pickTarget === 'destination') {
-      updateTab(activeTab, { destination: pickedStation });
+      updateTab(selectedSystem, { destination: pickedStation });
       onRequestPick(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickedStation, pickTarget]);
 
   // ── Query ────────────────────────────────────────────────────────────────────
-  const isMetro = METRO_SYSTEMS.has(activeTab);
+  const isMetro = selectedSystem ? METRO_SYSTEMS.has(selectedSystem) : false;
 
   const handleQuery = useCallback(async () => {
+    if (!selectedSystem) return;
     const { origin, destination, date } = state;
     if (!origin) return;
     if (!isMetro && !destination) return;
 
-    updateTab(activeTab, { loading: true, error: null, trainResults: null, metroInfo: null });
+    updateTab(selectedSystem, { loading: true, error: null, trainResults: null, metroInfo: null });
     const loadingId = onToast?.(t.train.queryToast, 'loading');
 
     try {
-      if (activeTab === 'TRA') {
+      if (selectedSystem === 'TRA') {
         const trains = await queryTdxTrainSchedule(origin.stationId, destination!.stationId, date);
-        updateTab(activeTab, { trainResults: trains });
+        updateTab(selectedSystem, { trainResults: trains });
         if (loadingId) onDismissToast?.(loadingId);
         onToast?.((t.train.querySuccess as (n: number) => string)(trains.length), 'success');
-      } else if (activeTab === 'HSR') {
+      } else if (selectedSystem === 'HSR') {
         const hsrList: HsrTrainResult[] = await queryHsrODSchedule(
           origin.stationId,
           destination!.stationId,
@@ -367,32 +389,34 @@ export default function TrainScheduleDialog({
             ? (t.train.hsrFare as (n: number) => string)(r.standardFare)
             : undefined,
         }));
-        updateTab(activeTab, { trainResults: trains });
+        updateTab(selectedSystem, { trainResults: trains });
         if (loadingId) onDismissToast?.(loadingId);
         onToast?.((t.train.querySuccess as (n: number) => string)(trains.length), 'success');
       } else {
         // Metro
         const metroInfo = await queryMetroServiceInfo(
-          activeTab,
+          selectedSystem,
           origin.stationId,
           destination?.stationId,
         );
-        updateTab(activeTab, { metroInfo });
+        updateTab(selectedSystem, { metroInfo });
         if (loadingId) onDismissToast?.(loadingId);
         onToast?.(t.train.metroQuerySuccess as string, 'success');
       }
     } catch (err: any) {
       const msg = err?.message ?? (t.train.queryFail as string);
-      updateTab(activeTab, { error: msg });
+      updateTab(selectedSystem, { error: msg });
       if (loadingId) onDismissToast?.(loadingId);
       onToast?.(msg, 'error');
     } finally {
-      updateTab(activeTab, { loading: false });
+      updateTab(selectedSystem, { loading: false });
     }
-  }, [state, activeTab, isMetro, onToast, onDismissToast, t, updateTab]);
+  }, [state, selectedSystem, isMetro, onToast, onDismissToast, t, updateTab]);
 
   // ── Step guidance ─────────────────────────────────────────────────────────
-  const systemLabel = t.train[`tab${activeTab}` as keyof typeof t.train] as string;
+  const systemLabel = selectedSystem
+    ? (t.train[`tab${selectedSystem}` as keyof typeof t.train] as string)
+    : '';
 
   const currentStep = isMetro
     ? !state.origin ? 1 : 2
@@ -419,6 +443,7 @@ export default function TrainScheduleDialog({
 
   // ── Station field renderer ────────────────────────────────────────────────
   const renderStationField = (which: 'origin' | 'destination', optional?: boolean) => {
+    if (!selectedSystem) return null;
     const value = which === 'origin' ? state.origin : state.destination;
     const query = which === 'origin' ? originQuery : destQuery;
     const setQuery = which === 'origin' ? setOriginQuery : setDestQuery;
@@ -439,14 +464,14 @@ export default function TrainScheduleDialog({
               placeholder={t.train.searchPlaceholder as string}
               value={value ? value.stationName : query}
               onChange={(e) => {
-                if (value) updateTab(activeTab, { [which]: null });
+                if (value) updateTab(selectedSystem, { [which]: null });
                 setQuery(e.target.value);
                 setDropOpen(true);
               }}
               onFocus={() => {
                 if (value) {
                   setQuery(value.stationName);
-                  updateTab(activeTab, { [which]: null });
+                  updateTab(selectedSystem, { [which]: null });
                 }
                 setDropOpen(true);
               }}
@@ -457,7 +482,7 @@ export default function TrainScheduleDialog({
                 className={styles.stationSelectClear}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
-                  updateTab(activeTab, { [which]: null });
+                  updateTab(selectedSystem, { [which]: null });
                   setQuery('');
                   setDropOpen(false);
                 }}
@@ -474,7 +499,7 @@ export default function TrainScheduleDialog({
                     className={styles.stationDropdownItem}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
-                      updateTab(activeTab, { [which]: s });
+                      updateTab(selectedSystem, { [which]: s });
                       setQuery('');
                       setDropOpen(false);
                     }}
@@ -488,7 +513,7 @@ export default function TrainScheduleDialog({
         ) : (
           <button
             className={`${styles.pickerBtn} ${pickTarget === which ? styles.pickerBtnActive : ''}`}
-            onClick={() => onRequestPick(which, activeTab)}
+            onClick={() => onRequestPick(which, selectedSystem)}
           >
             {value
               ? `🚉 ${value.stationName}`
@@ -610,89 +635,109 @@ export default function TrainScheduleDialog({
   );
 
   // ── Dialog title ──────────────────────────────────────────────────────────
-  const dialogTitle = activeTab === 'TRA'
+  const dialogTitle = !selectedSystem
+    ? (t.train.selectRoute as string)
+    : selectedSystem === 'TRA'
     ? (t.train.title as string)
-    : activeTab === 'HSR'
+    : selectedSystem === 'HSR'
     ? (t.train.hsrTitle as string)
     : `${systemLabel} 服務查詢`;
 
   // ── Main render ────────────────────────────────────────────────────────────
   return (
     <div className={styles.container}>
-      {/* ── Tab bar ── */}
-      <div className={styles.tabBar} role="tablist">
-        {SCHEDULE_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
-            onClick={() => handleTabChange(tab.id as ScheduleTabId)}
-          >
-            {t.train[tab.labelKey as keyof typeof t.train] as string}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Title ── */}
-      <h3 className={styles.title}>{dialogTitle}</h3>
-
-      {/* ── Step indicator ── */}
-      <div className={styles.stepIndicator}>
-        <div className={styles.stepDots}>
-          {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
-            <span
-              key={s}
-              className={`${styles.stepDot} ${s === currentStep ? styles.stepDotActive : ''} ${s < currentStep ? styles.stepDotDone : ''}`}
-            />
-          ))}
-        </div>
-        <p className={styles.stepMessage}>{stepMessages[currentStep]}</p>
-      </div>
-
-      {/* ── Station fields ── */}
-      {renderStationField('origin')}
-      {renderStationField('destination', isMetro)}
-
-      {/* ── Date + query (TRA / HSR) ── */}
-      {!isMetro && (
-        <div className={`${styles.timeSection} ${currentStep >= 3 ? styles.timeSectionActive : ''}`}>
-          <div className={styles.fieldGroup}>
-            <label className={styles.label}>{t.train.queryDate as string}</label>
-            <input
-              type="date"
-              className={styles.timeInput}
-              value={state.date}
-              onChange={(e) => updateTab(activeTab, { date: e.target.value })}
-            />
+      {/* ── Route selector screen ── */}
+      {!selectedSystem && (
+        <>
+          <h3 className={styles.title}>{dialogTitle}</h3>
+          <div className={styles.routeGrid}>
+            {SCHEDULE_TABS.map((tab) => {
+              const cfg = ROUTE_CONFIG[tab.id as ScheduleTabId];
+              return (
+                <button
+                  key={tab.id}
+                  className={styles.routeBtn}
+                  onClick={() => handleSystemSelect(tab.id as ScheduleTabId)}
+                >
+                  <span className={styles.routeBtnEmoji}>{cfg.emoji}</span>
+                  <span className={styles.routeBtnLabel}>{cfg.label}</span>
+                  <span className={styles.routeBtnSub}>{cfg.sub}</span>
+                </button>
+              );
+            })}
           </div>
-          <button
-            className={styles.queryBtn}
-            onClick={handleQuery}
-            disabled={!state.origin || !state.destination || state.loading}
-          >
-            {state.loading ? (t.train.querying as string) : (t.train.query as string)}
-          </button>
-        </div>
+        </>
       )}
 
-      {/* ── Metro query button ── */}
-      {isMetro && (
-        <div className={styles.metroQuerySection}>
-          <button
-            className={styles.queryBtn}
-            onClick={handleQuery}
-            disabled={!state.origin || state.loading}
-          >
-            {state.loading ? (t.train.querying as string) : (t.train.query as string)}
-          </button>
-        </div>
-      )}
+      {/* ── Query screen (system selected) ── */}
+      {selectedSystem && (
+        <>
+          {/* ── Back row ── */}
+          <div className={styles.backRow}>
+            <button className={styles.backBtn} onClick={handleBackToRoutes} type="button">
+              ← {t.train.backToRoutes as string}
+            </button>
+          </div>
 
-      {/* ── Results ── */}
-      {isMetro ? renderMetroResults() : renderTrainResults()}
+          {/* ── Title ── */}
+          <h3 className={styles.title}>{dialogTitle}</h3>
+
+          {/* ── Step indicator ── */}
+          <div className={styles.stepIndicator}>
+            <div className={styles.stepDots}>
+              {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
+                <span
+                  key={s}
+                  className={`${styles.stepDot} ${s === currentStep ? styles.stepDotActive : ''} ${s < currentStep ? styles.stepDotDone : ''}`}
+                />
+              ))}
+            </div>
+            <p className={styles.stepMessage}>{stepMessages[currentStep]}</p>
+          </div>
+
+          {/* ── Station fields ── */}
+          {renderStationField('origin')}
+          {renderStationField('destination', isMetro)}
+
+          {/* ── Date + query (TRA / HSR) ── */}
+          {!isMetro && (
+            <div className={`${styles.timeSection} ${currentStep >= 3 ? styles.timeSectionActive : ''}`}>
+              <div className={styles.fieldGroup}>
+                <label className={styles.label}>{t.train.queryDate as string}</label>
+                <input
+                  type="date"
+                  className={styles.timeInput}
+                  value={state.date}
+                  onChange={(e) => updateTab(selectedSystem, { date: e.target.value })}
+                />
+              </div>
+              <button
+                className={styles.queryBtn}
+                onClick={handleQuery}
+                disabled={!state.origin || !state.destination || state.loading}
+              >
+                {state.loading ? (t.train.querying as string) : (t.train.query as string)}
+              </button>
+            </div>
+          )}
+
+          {/* ── Metro query button ── */}
+          {isMetro && (
+            <div className={styles.metroQuerySection}>
+              <button
+                className={styles.queryBtn}
+                onClick={handleQuery}
+                disabled={!state.origin || state.loading}
+              >
+                {state.loading ? (t.train.querying as string) : (t.train.query as string)}
+              </button>
+            </div>
+          )}
+
+          {/* ── Results ── */}
+          {isMetro ? renderMetroResults() : renderTrainResults()}
+        </>
+      )}
     </div>
   );
 }
-
-

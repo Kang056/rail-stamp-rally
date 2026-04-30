@@ -86,6 +86,8 @@ const zhTW = {
   },
   liveBoard: {
     title: '🚃 即時看板（前後 30 分鐘）',
+    hsrTitle: '🚄 高鐵今日班次',
+    metroTitle: '🚇 捷運即時到站',
     loading: '載入中…',
     noData: '目前無班次資料',
     northbound: '⬆ 北上',
@@ -93,6 +95,9 @@ const zhTW = {
     noTrain: '無班次',
     onTime: '準點',
     delayed: (min: number) => `⚠${min}分`,
+    metroArriving: '即將進站',
+    metroEtaMins: (min: number) => `約 ${min} 分鐘`,
+    metroNoData: '暫無即時資料',
   },
   progress: {
     title: '🏅 車站紀念章收集進度',
@@ -152,6 +157,8 @@ const zhTW = {
     metroNoService: '此站查無服務資訊',
     metroStep1: '步驟 1：請選取起站',
     metroStep2: '步驟 2（選填）：選取迄站以查詢票價',
+    selectRoute: '請選擇路線',
+    backToRoutes: '返回路線選擇',
     // Tab labels
     tabTRA: '台鐵',
     tabHSR: '高鐵',
